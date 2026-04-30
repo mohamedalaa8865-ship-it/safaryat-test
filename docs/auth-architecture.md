@@ -1,0 +1,1 @@
+/** 💀 ERADICATED: Identity Artery merged into SOVEREIGN_CODE_ARCHIVE.md **/

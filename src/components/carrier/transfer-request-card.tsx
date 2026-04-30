@@ -1,0 +1,116 @@
+'use client';
+
+import type { TransferRequest, UserProfile } from '@/lib/data';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../ui/card';
+import { Button } from '../ui/button';
+import { Users, Calendar, ArrowRight, Check, X, Loader2 } from 'lucide-react';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Skeleton } from '../ui/skeleton';
+import { useState, useMemo } from 'react';
+import { getCityName } from '@/lib/constants';
+import { useLocale } from 'next-intl';
+
+function FromCarrierInfo({ carrierId }: { carrierId: string }) {
+    const firestore = useFirestore();
+    const carrierRef = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return doc(firestore, 'users', carrierId);
+    }, [firestore, carrierId]);
+
+    const { data: carrier, isLoading } = useDoc<UserProfile>(carrierRef);
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <div className='space-y-1'>
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-16" />
+                </div>
+            </div>
+        );
+    }
+    
+    if (!carrier) return <p>ناقل غير معروف</p>;
+
+    return (
+        <div className="flex items-center gap-3">
+             <Avatar className="h-8 w-8">
+                <AvatarFallback>{carrier.firstName?.charAt(0) || 'C'}</AvatarFallback>
+            </Avatar>
+            <div>
+                 <p className="text-sm font-bold">{carrier.firstName} {carrier.lastName}</p>
+                 <p className="text-xs text-muted-foreground">زميل ناقل</p>
+            </div>
+        </div>
+    );
+}
+
+interface TransferRequestCardProps {
+    request: TransferRequest;
+    onAccept: (request: TransferRequest) => Promise<void>;
+    onReject: (request: TransferRequest) => Promise<void>;
+}
+
+/**
+ * @component TransferRequestCard
+ * @description THE REINFORCED TRANSFER CARD (SC-806 V2.6.1)
+ * Enforced useMemoFirebase for document references to ensure zero redundant reads and resolve memo errors.
+ */
+export function TransferRequestCard({ request, onAccept, onReject }: TransferRequestCardProps) {
+    const [isProcessing, setIsProcessing] = useState(false);
+    const { tripDetails } = request;
+    const locale = useLocale();
+
+    const handleAccept = async () => {
+        setIsProcessing(true);
+        await onAccept(request);
+    }
+
+    const handleReject = async () => {
+        setIsProcessing(true);
+        await onReject(request);
+    }
+
+    return (
+        <Card className="w-full shadow-lg border-2 border-orange-400 bg-orange-500/5">
+            <CardHeader>
+                <CardTitle className="text-base">
+                    <FromCarrierInfo carrierId={request.fromCarrierId} />
+                </CardTitle>
+                <CardDescription className="pt-1">
+                    طلب استلام رحلة من زميل بسبب ظرف طارئ.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                <div className="flex items-center justify-center font-bold text-lg">
+                    <span>{getCityName(tripDetails.origin, locale)}</span>
+                    <ArrowRight className="mx-2 h-5 w-5 text-primary" />
+                    <span>{getCityName(tripDetails.destination, locale)}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm text-center">
+                    <div className="p-2 bg-muted rounded-md flex items-center justify-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>{new Date(tripDetails.departureDate).toLocaleDateString('ar-SA')}</span>
+                    </div>
+                    <div className="p-2 bg-muted rounded-md flex items-center justify-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>{tripDetails.passengerCount} ركاب</span>
+                    </div>
+                </div>
+            </CardContent>
+            <CardFooter className="flex gap-2 bg-card p-2">
+                <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={handleAccept} disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="ml-2 h-4 w-4 animate-spin"/> : <Check className="ml-2 h-4 w-4" />}
+                    قبول استلام الرحلة
+                </Button>
+                <Button variant="destructive" className="w-full" onClick={handleReject} disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="ml-2 h-4 w-4 animate-spin"/> : <X className="ml-2 h-4 w-4" />}
+                    رفض الطلب
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+}

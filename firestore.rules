@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * 🏛️ THE SOVEREIGN CONSTITUTION (ATOMIC UID SEAL - SCR-945)
+     * [SCR-945]: Absolute Sovereignty enforced via UID for the Supreme Commander.
+     * This bypasses all linguistic string comparison issues.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+   function isMaster() {
+      return isSignedIn() && request.auth.uid == "ml6aqjicmidPNad8yZvsPa2TXwq2";
+    }
+
+    function hasAdminClaim() {
+      return isSignedIn() && (
+        request.auth.token.isAdmin == true ||
+        request.auth.token.role == "admin" ||
+        request.auth.token.role == "owner"
+      );
+    }
+
+    function hasAdminProfile() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin" ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "owner"
+        );
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isMaster() ||
+        hasAdminClaim() ||
+        hasAdminProfile()
+      );
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- GLOBAL SOVEREIGN OVERRIDE ---
+    // Grant absolute access to everything for the Master/Admin
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // --- SPECIFIC COLLECTION RULES (For non-admin users) ---
+
+    /** 👤 Identity Sector */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+    }
+
+    /** 💰 Financial & Pricing Sector */
+      match /pricing_rules/{ruleId} {
+      allow get, list: if true;
+      }
+
+    /** 🕵️‍♂️ Admin Surveillance (SCR-943) - سجلات العمليات الإدارية */
+    match /admin_logs/{logId} {
+      // Guaranteed access for Master via global override above.
+      // Enforcing immutability for forensic integrity.
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    /** 🛣️ Operational Sector (Trips & Bookings) */
+    match /trips/{tripId} {
+      allow get, list: if true; 
+      
+      // [SCR-927] ATOMIC SUBSCRIPTION GUARD
+      allow create: if isSignedIn() && 
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.expiryDate > request.time;
+      
+      allow update: if (resource != null && (resource.data.carrierId == request.auth.uid || resource.data.userId == request.auth.uid)) ||
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewedAt']));
+      
+      match /offers/{offerId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.resource.data.carrierId == request.auth.uid;
+        allow update, delete: if (resource != null && resource.data.carrierId == request.auth.uid);
+      }
+
+      match /messages/{messageId} {
+        allow read: if true; 
+        allow create: if true; 
+      }
+    }
+
+    match /bookings/{bookingId} {
+      allow get, list: if (resource != null && (resource.data.userId == request.auth.uid || resource.data.carrierId == request.auth.uid));
+      allow create: if isSignedIn();
+      allow update: if (resource != null && (resource.data.userId == request.auth.uid || resource.data.carrierId == request.auth.uid));
+    }
+
+    /** 💬 Communication & Forensic Archive */
+    match /chats/{chatId} {
+      allow get, list: if (resource != null && request.auth.uid in resource.data.participants);
+      allow create: if isSignedIn();
+      allow update: if (resource != null && request.auth.uid in request.resource.data.participants);
+      
+      match /messages/{messageId} {
+        allow read: if (get(/databases/$(database)/documents/chats/$(chatId)).data.participants != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
+        allow create: if isSignedIn();
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Represents any user (Traveler, Carrier, Agent, Admin, Owner).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "role": { "type": "string", "enum": ["traveler", "carrier", "agent", "admin", "owner"] },
+        "atomicId": { "type": "string", "description": "Sequential ID like C-26-0001" },
+        "isActive": { "type": "boolean" },
+        "isDeactivated": { "type": "boolean" }
+      }
+    },
+    "Trip": {
+      "title": "Trip",
+      "description": "A scheduled trip or a traveler request.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "origin": { "type": "string" },
+        "destination": { "type": "string" },
+        "departureDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string" },
+        "carrierId": { "type": "string" },
+        "atomicId": { "type": "string" }
+      }
+    },
+    "PricingRule": {
+      "title": "PricingRule",
+      "description": "Geographic pricing and fee configurations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Country Code like JO" },
+        "countryName": { "type": "string" },
+        "currency": { "type": "string" },
+        "carrierSubscriptionFee": { "type": "number" },
+        "travelerCommissionFee": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["password", "anonymous", "google.com"]
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": { "$ref": "#/backend/entities/UserProfile" }, "description": "Global user registry." },
+    "/pricing_rules/{countryId}": { "schema": { "$ref": "#/backend/entities/PricingRule" }, "description": "Geographic fee control." },
+    "/trips/{tripId}": { "schema": { "$ref": "#/backend/entities/Trip" }, "description": "Trip and Request inventory." },
+    "/bookings/{bookingId}": { "schema": "object", "description": "Confirmed reservations." },
+    "/chats/{chatId}": { "schema": "object", "description": "Sovereign communication rooms." },
+    "/admin_logs/{logId}": { "schema": "object", "description": "Judicial audit log." },
+    "/fatal_crashes/{crashId}": { "schema": "object", "description": "Black box system failures." },
+    "/system_config/counters": { "schema": "object", "description": "Platform-wide atomic counters." }
+  }
+}

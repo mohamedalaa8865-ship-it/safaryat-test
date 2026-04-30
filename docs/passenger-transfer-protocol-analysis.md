@@ -1,0 +1,1 @@
+/** 💀 ERADICATED: Transfer Logic merged into SOVEREIGN_CODE_ARCHIVE.md **/

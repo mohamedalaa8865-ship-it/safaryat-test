@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 🏛️ The Sovereign Palette - High Contrast Diamond Edition */
+    --background: 346 51% 10%; /* Deepest Burgundy #250C12 */
+    --foreground: 46 36% 98%;
+
+    --card: 348 52% 6%; /* Absolute Dark #15060B */
+    --card-foreground: 46 36% 98%;
+
+    --popover: 348 52% 6%;
+    --popover-foreground: 46 36% 98%;
+
+    --primary: 46 36% 61%; /* Radiant Gold #beae77 */
+    --primary-foreground: 346 51% 10%; /* Dark text on Gold */
+
+    --secondary: 30 8% 15%; /* Muted Graphite */
+    --secondary-foreground: 46 36% 98%;
+
+    --muted: 30 8% 12%;
+    --muted-foreground: 46 36% 61%; /* Muted text is Golden */
+
+    --accent: 338 50% 26%; /* Regal Plum #632139 */
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 46 36% 61% / 0.2; /* Subtle Golden Borders */
+    --input: 30 8% 15%;
+    --ring: 46 36% 61%;
+
+    --turquoise: 180 70% 45%; /* Action Cyan */
+
+    --radius: 1.25rem; /* Unified Sovereign Curvature */
+  }
+
+  .dark {
+    --background: 346 51% 10%;
+    --foreground: 46 36% 98%;
+    --card: 348 52% 6%;
+    --card-foreground: 46 36% 98%;
+    --primary: 46 36% 61%;
+    --primary-foreground: 346 51% 10%;
+    --accent: 338 50% 26%;
+    --border: 46 36% 61% / 0.2;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border selection:bg-primary/30 selection:text-primary;
+  }
+  html,
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "Tajawal", sans-serif;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-black tracking-tighter text-foreground italic uppercase;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply bg-card/50 border-primary/10 focus:border-primary/40 focus:ring-primary/20 transition-all duration-300;
+  }
+}
+
+@layer components {
+  .carrier-bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 h-20 bg-card/80 backdrop-blur-xl border-t border-primary/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-50;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .sovereign-card {
+    @apply bg-card/40 backdrop-blur-md border border-primary/10 rounded-[2.5rem] shadow-2xl transition-all duration-500 hover:border-primary/30;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground font-black rounded-2xl shadow-lg hover:scale-[1.02] active:scale-95 transition-all;
+  }
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

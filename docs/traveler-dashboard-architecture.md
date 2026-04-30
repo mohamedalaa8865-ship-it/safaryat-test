@@ -1,0 +1,1 @@
+/** 💀 ERADICATED: UI Artery merged into SOVEREIGN_CODE_ARCHIVE.md **/

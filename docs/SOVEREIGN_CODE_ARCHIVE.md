@@ -1,0 +1,4 @@
+/**
+ * 💀 ERADICATED BY SUPREME COMMAND: [SCR-999]
+ * Status: DEAD / STERILIZED.
+ */
