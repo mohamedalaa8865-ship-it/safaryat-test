@@ -9,7 +9,6 @@ import {
 import { useMemo, useState, useCallback, memo } from 'react';
 import { TripCardBase } from '@/components/trip/trip-card-base';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-// import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { CarrierTrustSheet } from './carrier/carrier-trust-sheet';
@@ -20,52 +19,6 @@ import { cn, triggerHaptic } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { EMAILJS_CONFIG } from '@/lib/emailjs';
 
-// const CarrierInfo = memo(({ trip }: { trip: Trip }) => {
-//   const t = useTranslations('scheduledTripCard');
-//   const firestore = useFirestore();
-//   const [isTrustSheetOpen, setIsTrustSheetOpen] = useState(false);
-
-//   const carrierProfileRef = useMemoFirebase(() => {
-//     if (!firestore || !trip.carrierId) return null;
-//     return doc(firestore, 'users', trip.carrierId);
-//   }, [firestore, trip.carrierId]);
-
-//   const { data: carrier } = useDoc<UserProfile>(carrierProfileRef);
-
-//   const handleOpenTrustSheet = useCallback((e: React.MouseEvent) => {
-//     e.stopPropagation();
-//     triggerHaptic('light');
-//     setIsTrustSheetOpen(true);
-//   }, []);
-
-//   return (
-//     <>
-//       <button onClick={handleOpenTrustSheet} className="flex items-center gap-3 w-full text-right hover:bg-muted/50 p-2 rounded-xl transition-all group">
-//         <Avatar className="h-10 w-10 border-2 border-background shadow-md group-hover:border-primary/20 transition-all">
-//           <AvatarImage src={carrier?.photoURL || "/default-avatar.png"} alt={carrier?.officeName || carrier?.firstName || "Carrier Avatar"} />
-//           <AvatarFallback className="bg-primary/10 text-primary font-black">{carrier?.officeName?.[0] || carrier?.firstName?.[0] || "C"}</AvatarFallback>
-//         </Avatar>
-//         <div className="flex-1">
-//           <div className="flex items-center gap-1.5">
-//             <p className="text-sm font-bold group-hover:text-primary transition-colors">
-//               {carrier?.officeName || carrier?.firstName || trip.carrierName || '...'}
-//             </p>
-//             {carrier?.isVerifiedByAgent && <ShieldCheck className="h-3.5 w-3.5 text-emerald-500 fill-emerald-500/10" />}
-//           </div>
-//           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-//             <div className="flex items-center gap-1 text-amber-500">
-//               <Star className="h-3 w-3 fill-current" />
-//               <span>{carrier?.ratingStats?.average?.toFixed(1) || t('new')}</span>
-//             </div>
-//             <span>•</span>
-//             <span>{carrier?.ratingStats?.count || 0} {t('ratings')}</span>
-//           </div>
-//         </div>
-//       </button>
-//       <CarrierTrustSheet isOpen={isTrustSheetOpen} onClose={() => setIsTrustSheetOpen(false)} carrierId={carrier?.id || null} carrierName={carrier?.officeName || carrier?.firstName} carrierTier={carrier?.ratingStats?.tier} />
-//     </>
-//   );
-// });
 const CarrierInfo = memo(({ trip }: { trip: Trip }) => {
   const t = useTranslations('scheduledTripCard');
   const firestore = useFirestore();

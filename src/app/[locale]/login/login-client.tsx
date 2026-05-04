@@ -587,7 +587,7 @@ export default function LoginPhone() {
               ) : formData.role === "agent" ? (
                 <>
                   <ShieldCheck className="h-8 w-8 text-primary" />
-                  <span className="font-bold">وكيل</span>
+                  <span className="font-bold">{t('agent.title')}</span>
                 </>
               ) : (
                 <>

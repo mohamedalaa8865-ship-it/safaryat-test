@@ -175,7 +175,7 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
       toast({
         variant: 'destructive',
         title: t('errorProfile'),
-        description: 'يجب إكمال بيانات المركبة في ملفك الشخصي أولاً.'
+        description: t('errorProfileDesc')
       });
       onOpenChange(false);
       router.push('/carrier/profile');
@@ -206,8 +206,8 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
           } else {
             toast({
               variant: 'destructive',
-              title: 'عندك رحلة نشطة بالفعل ⚠️',
-              description: 'يجب إنهاء رحلتك الحالية قبل إنشاء رحلة جديدة.'
+              title: t('errorActiveTrip'),
+              description: t('errorActiveTripDesc')
             });
             return;
           }
@@ -220,8 +220,8 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
       } catch (e) {
         toast({
           variant: 'destructive',
-          title: 'تعذر التحقق من الرحلة الحالية',
-          description: 'حاول مرة أخرى.'
+          title: t('errorVerify'),
+          description: t('errorVerifyDesc')
         });
         return;
       }
@@ -267,14 +267,14 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
 
       await updateDoc(doc(firestore, 'users', user.uid), userUpdates);
 
-      toast({ title: 'تمت إضافة الرحلة بنجاح! ✅' });
+      toast({ title: t('successAdd') + ' ✅' });
       onOpenChange(false);
       form.reset();
     } catch (error: any) {
       toast({
         variant: 'destructive',
-        title: 'فشل الإضافة',
-        description: error?.message || 'حدث خطأ في النواة السحابية.'
+        title: t('errorAdd'),
+        description: error?.message || t('errorAddDesc')
       });
     } finally {
       setIsSubmitting(false);
@@ -298,11 +298,10 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
 
             <div className="space-y-2">
               <h3 className="text-2xl font-black text-foreground tracking-tight uppercase">
-                انتهت صلاحية التصريح
+                {t('expiredTitle')}
               </h3>
-              <p className="text-sm text-muted-foreground font-bold leading-relaxed max-w-sm mx-auto">
-                عذراً كابتن، لا يمكنك إضافة رحلات جديدة أو الظهور في سوق الفرص حالياً. يرجى تجديد
-                اشتراكك الماسي لاستعادة سيادتك الميدانية.
+              <p className="text-sm text-muted-foreground font-bold leading-relaxed max-w-sm mx-auto  ">
+                {t('expiredDesc')}
               </p>
             </div>
 
@@ -310,7 +309,7 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
               className="w-full h-14 rounded-2xl bg-primary text-black font-black text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
               onClick={() => router.push('/carrier/Permanent')}
             >
-              تجديد الاشتراك الآن
+              {t('expiredBtn')}
             </Button>
           </div>
         ) : (
@@ -515,7 +514,7 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
 
                   <AccordionContent className="p-4 pt-0 space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormField
+                      {/* <FormField
                         control={form.control}
                         name="departureDate"
                         render={({ field }) => (
@@ -539,9 +538,33 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
                             <FormMessage />
                           </FormItem>
                         )}
-                      />
-
+                      /> */}
                       <FormField
+                        control={form.control}
+                        name="departureDate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>{t('departureDate')}</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type="date"
+                                  className="bg-card block w-full pr-10 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                  {...field}
+                                  value={field.value ? format(field.value, 'yyyy-MM-dd') : ''}
+                                  onChange={(e) =>
+                                    field.onChange(e.target.value ? new Date(e.target.value) : undefined)
+                                  }
+                                  min={new Date().toISOString().split('T')[0]}
+                                />
+                                <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-primary cursor-pointer" />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      {/* <FormField
                         control={form.control}
                         name="departureTime"
                         render={({ field }) => (
@@ -549,6 +572,26 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
                             <FormLabel>{t('departureTime')}</FormLabel>
                             <FormControl>
                               <Input type="time" className="bg-card" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      /> */}
+                      <FormField
+                        control={form.control}
+                        name="departureTime"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>{t('departureTime')}</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type="time"
+                                  className="bg-card pr-10 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                                  {...field}
+                                />
+                                <Clock className="absolute right-3 top-2.5 h-4 w-4 text-primary pointer-events-none" />
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -616,7 +659,7 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
                         <FormItem>
                           <FormLabel className="flex items-center gap-1">
                             <MapPin className="h-4 w-4" />
-                            رابط الموقع على الخريطة
+                            {t('linkLocation')}
                           </FormLabel>
                           <FormControl>
                             <Input
@@ -627,7 +670,7 @@ export function AddTripDialog({ isOpen, onOpenChange }: AddTripDialogProps) {
                           </FormControl>
                           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
-                            سيظهر هذا الرابط للمسافر في تذكرته ليتمكن من الوصول لنقطة الانطلاق بسهولة
+                            {t('linkDec')}
                           </p>
                           <FormMessage />
                         </FormItem>

@@ -121,7 +121,12 @@ export const HeroTicket = ({ trip: initialTrip, booking, carrierProfile, onRateT
                             </Badge>
                         )}
                     </div>
-                    <CardTitle className="pt-2 text-xl">{getCityName(displayTrip.origin, locale)} <span className="text-white/70 mx-1">◄</span> {getCityName(displayTrip.destination, locale)}</CardTitle>
+                    {/* <CardTitle className="pt-2 text-xl">{getCityName(displayTrip.origin, locale)} <span className="text-white/70 mx-1">◄</span> {getCityName(displayTrip.destination, locale)}</CardTitle> */}
+                    <CardTitle className="pt-2 text-xl flex items-center gap-1">
+                        {getCityName(displayTrip.origin, locale)}
+                        <span className="text-white/70 mx-1">{locale === 'ar' ? '◄' : '◄'}</span>
+                        {getCityName(displayTrip.destination, locale)}
+                    </CardTitle>
                 </CardHeader>
 
                 <CardContent className="space-y-4 text-sm pt-4">
@@ -148,14 +153,14 @@ export const HeroTicket = ({ trip: initialTrip, booking, carrierProfile, onRateT
                     </div>
 
                     <div className="p-4 bg-background/50 rounded-2xl border border-primary/20 space-y-3 shadow-inner">
-                        <p className="font-black text-lg uppercase tracking-widest flex items-center gap-2 text-muted-foreground"><UserCheck className="h-4 w-4 text-primary" />{t('ditalsCarrier')}</p>
+                        <p className="font-black text-sm md:text-lg uppercase tracking-widest flex items-center gap-2 text-muted-foreground"><UserCheck className="h-4 w-4 text-primary" />{t('ditalsCarrier')}</p>
                         <div className="space-y-2">
                             <div className="flex justify-between items-center text-xs border-b border-dashed border-primary/10 pb-2">
-                                <span className="opacity-60 uppercase font-bold text-lg">{t('carrierName')}:</span>
+                                <span className="opacity-60 uppercase font-bold text-sm md:text-lg">{t('carrierName')}:</span>
                                 <span className={cn("font-black text-lg", isTransferred ? "text-amber-400" : "text-primary")}>{displayCarrierName}</span>
                             </div>
                             <div className="flex justify-between items-center text-xs">
-                                <span className="opacity-60 uppercase font-bold text-lg">{t('carrierNum')}:</span>
+                                <span className="opacity-60 uppercase font-bold text-sm md:text-lg">{t('carrierNum')}:</span>
                                 {carrierProfile?.phoneNumber ? (
                                     <a href={`tel:${carrierProfile.phoneNumber}`} className="font-black hover:underline ltr text-black  bg-[#A18E64] hover:bg-[#a18e64b1] px-2 py-1 rounded-lg ">{carrierProfile.phoneNumber}</a>
                                 ) : <span className="font-bold italic opacity-40">{t('viaChat')}</span>}
@@ -165,12 +170,12 @@ export const HeroTicket = ({ trip: initialTrip, booking, carrierProfile, onRateT
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="p-3 bg-background/50 rounded-2xl border border-primary/20 space-y-1 shadow-sm">
-                            <p className="text-lg font-black text-muted-foreground uppercase flex items-center gap-1"><Clock className="h-3 w-3" /> {t('appointment')}</p>
+                            <p className="text-sm md:text-lg font-black text-muted-foreground uppercase flex items-center gap-1"><Clock className="h-3 w-3" /> {t('appointment')}</p>
                             <p className="font-bold text-md">{formatDate(displayTrip.departureDate, 'd MMM yyyy', locale)}</p>
                         </div>
                         <div className="p-3 bg-background/50 rounded-2xl border border-primary/20 space-y-1 shadow-sm">
-                            <p className="text-lg font-black text-muted-foreground uppercase flex items-center gap-1"><MapPin className="h-3 w-3" /> {t('meetingPoint')}</p>
-                            <div className="flex  justify-between items-center">
+                            <p className="text-sm md:text-lg font-black text-muted-foreground uppercase flex items-center gap-1"><MapPin className="h-3 w-3" /> {t('meetingPoint')}</p>
+                            <div className="flex flex-col md:flex-row gap-1 justify-between md:items-center">
                                 <p className="font-bold text-md truncate">{displayTrip.meetingPoint || t('mainStation')}</p>
                                 {displayTrip.meetingPointLink ? (
                                     <a
@@ -200,12 +205,12 @@ export const HeroTicket = ({ trip: initialTrip, booking, carrierProfile, onRateT
 
                     <div className="p-4 bg-primary/5 rounded-2xl border border-dashed border-primary/30 space-y-3">
                         <div className="flex justify-between items-center">
-                            <span className="text-lg font-bold opacity-60">{t('totalPrice')}:</span>
+                            <span className="text-sm md:text-lg font-bold opacity-60">{t('totalPrice')}:</span>
                             <span className="font-bold text-lg">{currentTotalPrice.toFixed(2)} {booking.currency}</span>
                         </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-primary/10">
-                            <span className="text-lg font-black text-primary uppercase">{t('remainderCommander')}:</span>
-                            <Badge className="text-lg font-black bg-primary text-black px-4 py-1 h-auto shadow-md">
+                        <div className="flex  justify-between items-center pt-2 border-t border-primary/10">
+                            <span className="text-sm md:text-lg font-black text-primary uppercase">{t('remainderCommander')}:</span>
+                            <Badge className="text-sm font-black bg-primary text-black px-4 py-1  shadow-md">
                                 {remainingAmount.toFixed(2)} {booking.currency}
                             </Badge>
                         </div>
