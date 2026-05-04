@@ -96,7 +96,7 @@ export default function CarrierTripsPage() {
 
   return (
     <>
-      <div className="space-y-8 w-full">
+      <div className="space-y-8 w-full pt-10">
         <header>
           <h1 className="text-xl md:text-2xl font-bold">
             {t('title')}

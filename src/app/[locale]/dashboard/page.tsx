@@ -372,7 +372,7 @@ export default function DashboardPage() {
             <div className="flex flex-col items-center justify-center text-center py-16 px-4 border-2 border-dashed rounded-lg bg-secondary/5">
               <ShipWheel className="h-12 w-12 text-primary/40 mb-4 animate-spin-slow" />
               <h3 className="text-xl font-bold mb-2">{t('noScheduledTrips')}</h3>
-              <Button onClick={() => user ? setIsRequestOpen(true) : setIsAuthRedirectOpen(true)} className="mt-4 h-12 px-10">إنشاء طلب رحلة مخصصة</Button>
+              <Button onClick={() => user ? setIsRequestOpen(true) : setIsAuthRedirectOpen(true)} className="mt-4 h-12 px-10">{t('createSpecialRequest')}</Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">

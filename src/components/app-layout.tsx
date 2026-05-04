@@ -171,21 +171,37 @@ export function AppLayout({ children, profile, user, isEngaged = false, engageme
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 text-lg font-medium transition-colors hover:text-primary ${pathname === item.href ? "text-primary" : "text-muted-foreground"
-                        }`}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.label}
-                      {item.count != null && item.count > 0 ? (
-                        <span className="bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center ml-auto">{item.count}</span>
-                      ) : null
-                      }
-                    </Link>
+                    <>
+
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`flex items-center gap-3 text-lg font-medium transition-colors hover:text-primary ${pathname === item.href ? "text-primary" : "text-muted-foreground"
+                          }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                        {item.label}
+                        {item.count != null && item.count > 0 ? (
+                          <span className="bg-destructive text-destructive-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center ml-auto">{item.count}</span>
+                        ) : null
+                        }
+                      </Link>
+                    </>
+
                   );
                 })}
+                {user ?
+                  <div className="hidden">
+                    <Link href="/email-login?role=traveler"><Button className="w-full">{t("login")}</Button></Link>
+                    <Link href="/"><Button className="w-full">{t("home")}</Button></Link>
+                    <LanguageSwitcher fullWidth />
+                  </div> :
+                  <div className="flex flex-col gap-2 ">
+                    <Link href="/email-login?role=traveler"><Button className="w-full">{t("login")}</Button></Link>
+                    <Link href="/"><Button className="w-full">{t("home")}</Button></Link>
+                    <LanguageSwitcher fullWidth />
+                  </div>
+                }
 
                 <div className="mx-auto">
                   <Button className="text-lg font-semibold mb-4 text-center" onClick={() => setIsSocialOpen(true)}>{locale === "ar" ? "تابعنا على السوشيال ميديا" : "Follow us"} </Button>
@@ -198,15 +214,43 @@ export function AppLayout({ children, profile, user, isEngaged = false, engageme
                     </div>
                   </SheetContent>
                 </Sheet>
-                <Button variant="ghost" className="justify-start gap-3 text-destructive mt-4 hover:bg-destructive/10" onClick={handleLogout}>
+                {user && <Button variant="ghost" className="justify-start gap-3 text-destructive mt-4 hover:bg-destructive/10" onClick={handleLogout}>
                   <LogOut className="h-5 w-5" />
                   {t("logout")}
-                </Button>
+                </Button>}
               </nav>
             </SheetContent>
           </Sheet>
 
-          <div className={`flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2 ${locale === "ar" ? "ml-8" : "-ml-10"} md:static md:transform-none mt-5`}>
+          {user ?
+            <div className={`flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2 ${locale === "ar" ? "ml-8" : "-ml-10"} md:static md:transform-none mt-5`}>
+              <div>
+                <Image
+                  src="/logo.png"
+                  alt="Logo"
+                  width={180}
+                  height={180}
+                  style={{ height: 'auto' }}
+                  priority
+                  className="w-[110px] md:w-[180px]"
+                />
+              </div>
+            </div> :
+            <div className={`flex items-center gap-2 absolute left-1/2 transform -translate-x-60 ${locale === "ar" ? "ml-8" : "-ml-10"} md:ms-0 md:static md:transform-none  mt-5`}>
+              <div>
+                <Image
+                  src="/logo.png"
+                  alt="Logo"
+                  width={180}
+                  height={180}
+                  style={{ height: 'auto' }}
+                  priority
+                  className="w-[110px] md:w-[180px]"
+                />
+              </div>
+            </div>
+          }
+          {/* <div className={`flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2 ${locale === "ar" ? "ml-8" : "-ml-10"} md:static md:transform-none mt-5`}>
             <div>
               <Image
                 src="/logo.png"
@@ -218,7 +262,7 @@ export function AppLayout({ children, profile, user, isEngaged = false, engageme
                 className="w-[110px] md:w-[180px]"
               />
             </div>
-          </div>
+          </div> */}
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
             {navItems.map((item) => (
@@ -267,9 +311,11 @@ export function AppLayout({ children, profile, user, isEngaged = false, engageme
               </div>
             ) : (
               <>
-                <Link href="/email-login?role=traveler"><Button size="sm">{t("login")}</Button></Link>
-                <Link href="/"><Button size="sm">{t("home")}</Button></Link>
-                <LanguageSwitcher />
+                <div className="hidden md:flex items-center gap-1 text-sm font-medium">
+                  <Link href="/email-login?role=traveler"><Button size="sm">{t("login")}</Button></Link>
+                  <Link href="/"><Button size="sm">{t("home")}</Button></Link>
+                  <LanguageSwitcher />
+                </div>
               </>
             )}
           </div>

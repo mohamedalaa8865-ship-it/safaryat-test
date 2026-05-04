@@ -2,104 +2,153 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Share, X, Sparkles } from 'lucide-react';
+import { Download, X, Sparkles } from 'lucide-react';
 import { triggerHaptic } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 
-/**
- * @component PwaInstallPrompt
- * @description THE SMART BRIDGE (NATIVE SIMULATION - SC-534)
- * Guides users to install the PWA based on their platform (iOS/Android).
- */
+// ✅ غير ده لـ false لما تتأكد إن كل حاجة شغالة
+const DEBUG_MODE = true;
+
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true);
   const [showPrompt, setShowPrompt] = useState(false);
-
+  const [debugInfo, setDebugInfo] = useState('');
+  const t = useTranslations('pwa')
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Check if already running in standalone mode
-    const isAppMode = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    // STEP 1: هل التطبيق متثبت أصلاً؟
+    const isAppMode =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
+
     setIsStandalone(isAppMode);
-    
+    if (DEBUG_MODE) setDebugInfo(`standalone:${isAppMode}`);
     if (isAppMode) return;
 
-    // Detect iOS to show manual instructions
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isApple = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(isApple);
+    // STEP 2: هل iOS؟
+    const ua = window.navigator.userAgent.toLowerCase();
+    const isAppleDevice =
+      /iphone|ipad|ipod/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-    // If Apple, delay the prompt slightly for UX
-    if (isApple) {
+    setIsIOS(isAppleDevice);
+    if (DEBUG_MODE) setDebugInfo(prev => prev + ` | iOS:${isAppleDevice}`);
+
+    // STEP 3: في DEBUG نتجاهل الـ dismiss — في production نحترمه
+    if (!DEBUG_MODE) {
       const dismissed = localStorage.getItem('pwa_prompt_dismissed');
-      if (!dismissed) {
-        setTimeout(() => setShowPrompt(true), 10000);
+      if (dismissed) {
+        const age = Date.now() - parseInt(dismissed);
+        if (age < 7 * 24 * 60 * 60 * 1000) return;
       }
     }
 
-    // Capture the native install prompt event (Chrome/Android)
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      const dismissed = localStorage.getItem('pwa_prompt_dismissed');
-      if (!dismissed) {
-        setShowPrompt(true);
+    if (isAppleDevice) {
+      setTimeout(() => setShowPrompt(true), DEBUG_MODE ? 1000 : 8000);
+    } else {
+      // Android: جرب window.__pwaPrompt المحفوظ في layout
+      const saved = (window as any).__pwaPrompt;
+      if (DEBUG_MODE) setDebugInfo(prev => prev + ` | saved:${!!saved}`);
+
+      if (saved) {
+        setDeferredPrompt(saved);
+        setTimeout(() => setShowPrompt(true), DEBUG_MODE ? 1000 : 3000);
+      } else if (DEBUG_MODE) {
+        // في debug: اعرض الـ UI حتى لو مفيش prompt عشان نشوف الـ UI
+        setTimeout(() => setShowPrompt(true), 1000);
       }
-    };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      const handler = (e: any) => {
+        e.preventDefault();
+        (window as any).__pwaPrompt = e;
+        setDeferredPrompt(e);
+        if (DEBUG_MODE) setDebugInfo(prev => prev + ' | event!');
+        setTimeout(() => setShowPrompt(true), DEBUG_MODE ? 500 : 3000);
+      };
+      window.addEventListener('beforeinstallprompt', handler);
+      return () => window.removeEventListener('beforeinstallprompt', handler);
+    }
   }, []);
 
-  const handleInstallClick = async () => {
+  const handleInstall = async () => {
     triggerHaptic('light');
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setShowPrompt(false);
-      }
-      setDeferredPrompt(null);
-    }
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setShowPrompt(false);
+    setDeferredPrompt(null);
   };
 
-  const dismissPrompt = () => {
+  const dismiss = () => {
+    triggerHaptic('light');
     setShowPrompt(false);
-    // Remember dismissal for 7 days to avoid annoyance
-    localStorage.setItem('pwa_prompt_dismissed', Date.now().toString());
+    if (!DEBUG_MODE) {
+      localStorage.setItem('pwa_prompt_dismissed', Date.now().toString());
+    }
   };
 
   if (isStandalone || !showPrompt) return null;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 bg-card border-2 border-primary/30 p-4 rounded-2xl shadow-2xl z-[9998] flex items-center gap-4 animate-in slide-in-from-bottom-10 duration-700">
-      <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
-        <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+    <div className="fixed bottom-20 left-4 right-4 bg-card border-2 border-primary/30 p-4 rounded-2xl shadow-2xl z-[9998] animate-in slide-in-from-bottom-10 duration-500">
+
+      {/* {DEBUG_MODE && debugInfo && (
+        <p className="text-[9px] text-yellow-400 bg-black/60 rounded px-2 py-1 mb-2 font-mono break-all">
+          🐛 {debugInfo}
+        </p>
+      )} */}
+
+      <div className="flex items-start gap-3">
+        <div className="h-11 w-11 bg-primary/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+          <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-bold mb-1">{t("title")}</h4>
+
+          {isIOS ? (
+            <div className="text-[11px] text-muted-foreground leading-relaxed">
+              <p className="mb-1.5">{t('androidDesc')}</p>
+              <ol className="flex flex-col gap-1">
+                <li className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">١</span>
+                  <span>{t('step1')}</span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">٢</span>
+                  <span>{t('step2')}</span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">٣</span>
+                  <span>{t('step3')} </span>
+                </li>
+              </ol>
+            </div>
+          ) : (
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {t('androidDesc')}
+            </p>
+          )}
+        </div>
+
+        <button onClick={dismiss} className="text-muted-foreground hover:text-foreground p-1 -mt-1 -mr-1">
+          <X className="h-4 w-4" />
+        </button>
       </div>
-      
-      <div className="flex-1">
-        <h4 className="text-sm font-bold mb-0.5">تجربة "سفريات" كاملة</h4>
-        {isIOS ? (
-          <p className="text-[10px] text-muted-foreground leading-tight">
-            اضغط على <Share className="h-3 w-3 inline mx-0.5" /> ثم <strong>"إضافة للشاشة الرئيسية"</strong> للحصول على تطبيق أسرع.
-          </p>
-        ) : (
-          <p className="text-[10px] text-muted-foreground leading-tight">
-            قم بتثبيت التطبيق الآن للعمل بدون إنترنت وتلقي إشعارات فورية.
-          </p>
-        )}
-      </div>
-      
-      <div className="flex flex-col gap-2">
+
+      <div className="flex gap-2 mt-3">
         {!isIOS && (
-          <Button onClick={handleInstallClick} size="sm" className="h-8 text-[10px] font-black px-4 bg-turquoise text-black hover:bg-turquoise/90">
-            <Download className="ml-1.5 h-3 w-3" /> تثبيت
+          <Button onClick={handleInstall} size="sm" className="flex-1 h-8 text-xs font-black gap-1.5">
+            <Download className="h-3.5 w-3.5" />
+            {/* {deferredPrompt ? 'تثبيت الآن' : (DEBUG_MODE ? '🐛 No Native Prompt' : 'تثبيت')} */}
+            {t('install')}
           </Button>
         )}
-        <button onClick={dismissPrompt} className="text-[10px] text-muted-foreground hover:text-foreground font-bold transition-colors">
-          ليس الآن
+        <button onClick={dismiss} className="text-xs text-muted-foreground hover:text-foreground font-medium px-3">
+          {t('later')}
         </button>
       </div>
     </div>

@@ -1,366 +1,3 @@
-// 'use client';
-
-// import { useState, useEffect, useMemo, useRef } from 'react';
-// import { useTranslations } from 'next-intl';
-// import { useUserProfile } from '@/hooks/use-user-profile';
-// import { updateDoc, serverTimestamp } from 'firebase/firestore';
-// import { useForm } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod';
-// import { z } from 'zod';
-// import { Button } from '@/components/ui/button';
-// import { Label } from '@/components/ui/label';
-// import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { Textarea } from '@/components/ui/textarea';
-// import { Input } from '@/components/ui/input';
-// import { Loader2, Save, ListChecks, Wallet, ShieldAlert } from 'lucide-react';
-// import { useToast } from '@/hooks/use-toast';
-// import { useRouter } from 'next/navigation';
-// import { useCarrierSubscription } from '@/hooks/use-carrier-subscription';
-// import {
-//   Accordion,
-//   AccordionContent,
-//   AccordionItem,
-//   AccordionTrigger,
-// } from '@/components/ui/accordion';
-// import {
-//   Form,
-//   FormControl,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from '@/components/ui/form';
-
-// const pageSchema = z.object({
-//   price: z.coerce.number().positive('السعر يجب أن يكون رقماً موجباً').optional(),
-//   currency: z.string().default('د.أ'),
-//   depositPercentage: z.coerce.number().min(0).default(10),
-//   conditions: z.string().max(200).optional(),
-// });
-
-// type PageFormValues = z.infer<typeof pageSchema>;
-
-// /**
-//  * @page CarrierPermanentPage
-//  * @description THE REINFORCED STABILITY FORM (SC-680-ALIGNED)
-//  * [SC-680]: Integrated Market Kill-Switch. Prevents updates if sector is frozen.
-//  * [SC-806 V5.5]: Eradicated "Double Echo" by feeding pulse directly.
-//  */
-// export default function CarrierPermanentPage() {
-//   const t = useTranslations('carrierConditions');
-//   const tCommon = useTranslations('common');
-//   const tError = useTranslations('errorDictionary');
-//   const { profile, isLoading, userProfileRef } = useUserProfile();
-
-//   // [SC-806 V5.5]: Pass profile directly to eradicate Double Echo syndrome
-//   const { isMarketActive, marketRule, status: subStatus } = useCarrierSubscription(profile);
-
-//   const { toast } = useToast();
-//   const router = useRouter();
-//   const isInitialized = useRef(false);
-
-//   const [formData, setFormData] = useState({
-//     paymentInformation: '',
-//     bagsPerSeat: '1',
-//     numberOfStops: '0',
-//     vehicleType: '',
-//     vehicleYear: '',
-//     plateNumber: '',
-//     vehicleCapacity: '',
-//     jurisdictionOrigin: '',
-//     jurisdictionDest: '',
-//     officeName: '',
-//     officePhone: '',
-//     sidePanelNumber: '',
-//     vehicleCategory: '',
-//   });
-
-//   const [isSaving, setIsSaving] = useState(false);
-
-//   const form = useForm<PageFormValues>({
-//     resolver: zodResolver(pageSchema),
-//     defaultValues: {
-//       price: undefined,
-//       currency: 'د.أ',
-//       depositPercentage: 10,
-//       conditions: '',
-//     },
-//   });
-
-//   const conditionsValue = form.watch('conditions');
-//   const priceValue = form.watch('price');
-//   const depositPercentageValue = form.watch('depositPercentage');
-
-//   const depositAmount = useMemo(() => {
-//     const price = priceValue || 0;
-//     const percentage = depositPercentageValue || 0;
-//     return (price * (percentage / 100)).toFixed(2);
-//   }, [priceValue, depositPercentageValue]);
-
-//   useEffect(() => {
-//     if (profile && !isInitialized.current) {
-//       setFormData({
-//         paymentInformation: profile.paymentInformation || '',
-//         bagsPerSeat: profile.bagsPerSeat?.toString() || '1',
-//         numberOfStops: profile.numberOfStops?.toString() || '0',
-//         vehicleType: profile.vehicleType || '',
-//         vehicleYear: profile.vehicleYear || '',
-//         plateNumber: profile.plateNumber || '',
-//         vehicleCapacity: profile.vehicleCapacity?.toString() || '',
-//         jurisdictionOrigin: profile.jurisdiction?.origin || '',
-//         jurisdictionDest: profile.jurisdiction?.destination || '',
-//         officeName: profile.officeName || '',
-//         officePhone: profile.officePhone || '',
-//         sidePanelNumber: profile.sidePanelNumber || '',
-//         vehicleCategory: profile.vehicleCategory || '',
-//       });
-
-//       form.reset({
-//         price: profile.price ?? undefined,
-//         currency: profile.currency || 'د.أ',
-//         depositPercentage: profile.depositPercentage ?? 10,
-//         conditions: profile.conditions || '',
-//       });
-//       isInitialized.current = true;
-//     }
-//   }, [profile?.id, form]);
-
-//   const handleSave = async () => {
-//     // [SC-680] KILL-SWITCH: Backend-first guard
-//     if (!isMarketActive) {
-//       toast({ 
-//         variant: "destructive", 
-//         title: "القطاع مجمد", 
-//         description: `لا يمكن تحديث الإعدادات المهنية في قطاع ${marketRule?.countryName || ''} حالياً.` 
-//       });
-//       return;
-//     }
-
-//     if (!userProfileRef) {
-//       toast({ title: tCommon('error'), description: tError('AUTH_REQUIRED'), variant: 'destructive' });
-//       return;
-//     }
-
-//     const isFormValid = await form.trigger();
-//     if (!isFormValid) {
-//       toast({ title: tCommon('error'), description: tError('MISSING_DATA'), variant: 'destructive' });
-//       return;
-//     }
-
-//     const formValues = form.getValues();
-
-//     setIsSaving(true);
-//     try {
-//       const capacity = Number(formData.vehicleCapacity);
-//       const isBus = capacity > 7;
-
-//       const payload = {
-//         paymentInformation: formData.paymentInformation,
-//         bagsPerSeat: Number(formData.bagsPerSeat),
-//         numberOfStops: Number(formData.numberOfStops),
-//         vehicleType: formData.vehicleType,
-//         vehicleYear: formData.vehicleYear,
-//         plateNumber: formData.plateNumber,
-//         vehicleCapacity: capacity,
-//         vehicleCategory: isBus ? 'bus' : 'small',
-//         jurisdiction: {
-//           origin: formData.jurisdictionOrigin,
-//           destination: formData.jurisdictionDest,
-//         },
-//         officeName: formData.officeName,
-//         officePhone: formData.officePhone,
-//         sidePanelNumber: formData.sidePanelNumber,
-//         price: formValues.price ?? null,
-//         currency: formValues.currency,
-//         depositPercentage: formValues.depositPercentage,
-//         conditions: formValues.conditions || '',
-//         updatedAt: serverTimestamp(),
-//         isPartial: false,
-//       };
-
-//       await updateDoc(userProfileRef, payload);
-//       toast({ title: tCommon('success') });
-//       router.push('/carrier');
-//     } catch (error: any) {
-//       console.error(error);
-//       toast({ 
-//           variant: 'destructive', 
-//           title: tCommon('error'), 
-//           description: tError(error.message || 'DEFAULT') 
-//       });
-//     } finally {
-//       setIsSaving(false);
-//     }
-//   };
-
-//   if (isLoading || subStatus === 'loading') {
-//     return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
-//   }
-
-//   // [SC-680] UI SHIELD: Render restricted view if market is inactive
-//   if (!isMarketActive) {
-//     return (
-//       <div className="container max-w-2xl mx-auto p-8 text-center space-y-6 bg-card rounded-2xl border border-destructive/20 mt-10">
-//         <div className="bg-destructive/10 p-6 rounded-full w-fit mx-auto">
-//           <ShieldAlert className="h-16 w-16 text-destructive animate-pulse" />
-//         </div>
-//         <div className="space-y-2">
-//           <h2 className="text-2xl font-black">القطاع يخضع للصيانة السيادية</h2>
-//           <p className="text-muted-foreground font-bold">
-//             عذراً كابتن، تم تعليق تحديث البيانات المهنية في قطاع {marketRule?.countryName || ''} بناءً على أوامر الإدارة. يرجى مراجعة غرفة العمليات لاحقاً.
-//           </p>
-//         </div>
-//         <Button variant="outline" onClick={() => router.push('/carrier')}>العودة لغرفة العمليات</Button>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="container max-w-3xl mx-auto p-4 space-y-6" dir="rtl">
-//       <Card>
-//         <CardHeader>
-//           <CardTitle className="flex items-center gap-2">
-//             <ListChecks className="h-6 w-6 text-primary" />
-//             {t('titlePermanent')}
-//           </CardTitle>
-//           <CardDescription>{t('description')}</CardDescription>
-//         </CardHeader>
-//         <CardContent className="space-y-6">
-
-//           <Card className="bg-muted/30 p-4 space-y-4">
-//             <h4 className="font-semibold text-sm">{t('permanentConditions')}</h4>
-//             <div className="space-y-2">
-//               <Label>{t('paymentInfo')}</Label>
-//               <Textarea placeholder={t('placeholders.paymentInfo')} value={formData.paymentInformation} onChange={e => setFormData({...formData, paymentInformation: e.target.value})} rows={3} />
-//             </div>
-//           </Card>
-
-//           <Form {...form}>
-//             <Accordion type="single" collapsible className="w-full">
-//               <AccordionItem value="financials" className="border rounded-lg bg-muted/30">
-//                 <AccordionTrigger className="p-4 font-semibold text-sm hover:no-underline">
-//                   <div className="flex items-center gap-2">
-//                     <Wallet className="h-4 w-4" />
-//                     التفاصيل المالية
-//                   </div>
-//                 </AccordionTrigger>
-//                 <AccordionContent className="p-4 pt-0 space-y-4">
-//                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-//                     <FormField control={form.control} name="price" render={({ field }) => (
-//                       <FormItem>
-//                         <FormLabel>سعر المقعد</FormLabel>
-//                         <FormControl>
-//                           <Input className="bg-card" type="number" placeholder="e.g., 50" {...field} value={field.value ?? ''} />
-//                         </FormControl>
-//                         <FormMessage />
-//                       </FormItem>
-//                     )} />
-//                     <FormField control={form.control} name="currency" render={({ field }) => (
-//                       <FormItem>
-//                         <FormLabel>العملة</FormLabel>
-//                         <FormControl>
-//                           <Input
-//                             className="bg-card"
-//                             placeholder="مثال: دولار، €، جنيه"
-//                             {...field}
-//                           />
-//                         </FormControl>
-//                         <FormMessage />
-//                       </FormItem>
-//                     )} />
-//                     <FormField control={form.control} name="depositPercentage" render={({ field }) => (
-//                       <FormItem>
-//                         <FormLabel>نسبة العربون</FormLabel>
-//                         <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
-//                           <FormControl>
-//                             <SelectTrigger><SelectValue placeholder="اختر نسبة" /></SelectTrigger>
-//                           </FormControl>
-//                           <SelectContent>
-//                             {[0, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100].map(p => (
-//                               <SelectItem key={p} value={String(p)}>{p}%</SelectItem>
-//                             ))}
-//                           </SelectContent>
-//                         </Select>
-//                         <FormMessage />
-//                       </FormItem>
-//                     )} />
-//                   </div>
-//                   <div className="p-2 bg-background/50 border rounded-md text-center text-sm font-bold text-primary">
-//                     قيمة العربون للمقعد الواحد: {depositAmount} {form.watch('currency')}
-//                   </div>
-//                 </AccordionContent>
-//               </AccordionItem>
-//             </Accordion>
-
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//               <div className="space-y-2">
-//                 <Label>{t('bagsPerSeat')}</Label>
-//                 <Select value={formData.bagsPerSeat} onValueChange={val => setFormData({...formData, bagsPerSeat: val})}>
-//                   <SelectTrigger><SelectValue placeholder="اختر العدد" /></SelectTrigger>
-//                   <SelectContent>
-//                     <SelectItem value="0">0</SelectItem>
-//                     <SelectItem value="1">1</SelectItem>
-//                     <SelectItem value="2">2</SelectItem>
-//                     <SelectItem value="3">3</SelectItem>
-//                   </SelectContent>
-//                 </Select>
-//               </div>
-//               <div className="space-y-2">
-//                 <Label>{t('numberOfStops')}</Label>
-//                 <Select value={formData.numberOfStops} onValueChange={val => setFormData({...formData, numberOfStops: val})}>
-//                   <SelectTrigger><SelectValue placeholder="اختر العدد" /></SelectTrigger>
-//                   <SelectContent>
-//                     <SelectItem value="0">0</SelectItem>
-//                     <SelectItem value="1">1</SelectItem>
-//                     <SelectItem value="2">2</SelectItem>
-//                     <SelectItem value="3">3</SelectItem>
-//                   </SelectContent>
-//                 </Select>
-//               </div>
-//             </div>
-
-//             <Accordion type="single" collapsible className="w-full">
-//               <AccordionItem value="conditions" className="border rounded-lg bg-muted/30">
-//                 <AccordionTrigger className="p-4 font-semibold text-sm hover:no-underline">
-//                   <div className="flex items-center gap-2">
-//                     <ListChecks className="h-4 w-4" />
-//                     الشروط والأحكام (اختياري)
-//                   </div>
-//                 </AccordionTrigger>
-//                 <AccordionContent className="p-4 pt-0">
-//                   <FormField control={form.control} name="conditions" render={({ field }) => (
-//                     <FormItem>
-//                       <FormControl>
-//                         <Textarea
-//                           placeholder="مثال: ممنوع التدخين، حقيبة واحدة فقط لكل راكب..."
-//                           className="resize-none bg-card"
-//                           {...field}
-//                           maxLength={200}
-//                           value={field.value ?? ''}
-//                         />
-//                       </FormControl>
-//                       <div className="text-xs text-muted-foreground text-left pt-1">
-//                         {conditionsValue?.length || 0}/200
-//                       </div>
-//                       <FormMessage />
-//                     </FormItem>
-//                   )} />
-//                 </AccordionContent>
-//               </AccordionItem>
-//             </Accordion>
-//           </Form>
-
-//           <Button className="w-full" onClick={handleSave} disabled={isSaving}>
-//             {isSaving ? <Loader2 className="animate-spin ml-2" /> : <Save className="ml-2 h-4 w-4" />}
-//             {t('saveButton')}
-//           </Button>
-
-//         </CardContent>
-//       </Card>
-//     </div>
-//   );
-// }
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
@@ -492,7 +129,7 @@ export default function CarrierPermanentPage() {
 
   const handleAddWallet = () => {
     if (!newWallet.provider || !newWallet.accountNumber) {
-      toast({ variant: 'destructive', title: 'بيانات ناقصة' });
+      toast({ variant: 'destructive', title: t('missingData') });
       return;
     }
     const wallet: PaymentWallet = {
@@ -535,7 +172,7 @@ export default function CarrierPermanentPage() {
         isPartial: false,
       });
 
-      toast({ title: tCommon('success'), description: 'تم تشميع الإعدادات الميدانية بنجاح.' });
+      toast({ title: tCommon('success'), description: t('scsses') });
       router.push('/carrier');
     } catch (error: any) {
       toast({ variant: 'destructive', title: tCommon('error'), description: tError('DEFAULT') });
@@ -555,7 +192,7 @@ export default function CarrierPermanentPage() {
             <ListChecks className="h-8 w-8 text-primary" />
             {t('titlePermanent')}
           </CardTitle>
-          <CardDescription className="font-bold text-xs">مركز إدارة الأصول والسيادة المالية للناقل.</CardDescription>
+          <CardDescription className="font-bold text-xs">{t('carrierDec')}</CardDescription>
         </CardHeader>
 
         <CardContent className="p-8 space-y-8">
@@ -563,9 +200,9 @@ export default function CarrierPermanentPage() {
           {/* Section: Sovereign Wallet Matrix */}
           <section className="space-y-4">
             <div className="flex justify-between items-center px-1">
-              <Label className="text-sm font-black uppercase text-primary flex items-center gap-2"><Wallet className="h-5 w-5" /> مصفوفة المحافظ المالية</Label>
+              <Label className="text-sm font-black uppercase text-primary flex items-center gap-2"><Wallet className="h-5 w-5" /> {t('wallet')}</Label>
               <Button variant="outline" size="sm" onClick={() => setIsAddingWallet(true)} className="h-8 rounded-xl font-bold gap-1 border-primary/20">
-                <Plus className="h-3 w-3" /> إضافة وسيلة
+                <Plus className="h-3 w-3" /> {t('addWallet')}
               </Button>
             </div>
 
@@ -588,7 +225,7 @@ export default function CarrierPermanentPage() {
               ))}
               {wallets.length === 0 && (
                 <div className="p-10 text-center border-2 border-dashed border-primary/10 rounded-3xl opacity-40">
-                  <p className="text-xs font-bold">لا توجد محافظ مسجلة. أضف وسيلة لاستلام العربون.</p>
+                  <p className="text-xs font-bold">{t('noWallet')}</p>
                 </div>
               )}
             </div>
@@ -597,35 +234,35 @@ export default function CarrierPermanentPage() {
               <div className="p-6 bg-primary/5 border border-primary/20 rounded-[2rem] space-y-4 animate-in zoom-in-95">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase">النوع</Label>
+                    <Label className="text-[10px] font-black uppercase">{t('type')}</Label>
                     <Select value={newWallet.type} onValueChange={(v: any) => setNewWallet({ ...newWallet, type: v })}>
                       <SelectTrigger className="h-11 bg-background"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="wallet">محفظة إلكترونية</SelectItem>
-                        <SelectItem value="bank">حساب بنكي</SelectItem>
-                        <SelectItem value="card">بطاقة دفع</SelectItem>
-                        <SelectItem value="other">أخرى</SelectItem>
+                        <SelectItem value="wallet">{t('electronicWallet')}</SelectItem>
+                        <SelectItem value="bank">{t('bankingAccount')}</SelectItem>
+                        <SelectItem value="card">{t('payWallet')}</SelectItem>
+                        <SelectItem value="other">{t('other')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase">المزود (اسم البنك/المحفظة)</Label>
-                    <Input value={newWallet.provider} onChange={e => setNewWallet({ ...newWallet, provider: e.target.value })} placeholder="مثال: Zain Cash" className="h-11 bg-background" />
+                    <Label className="text-[10px] font-black uppercase">{t('nameBank')}</Label>
+                    <Input value={newWallet.provider} onChange={e => setNewWallet({ ...newWallet, provider: e.target.value })} placeholder={t('like')} className="h-11 bg-background" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase">رقم الحساب / الهاتف</Label>
+                    <Label className="text-[10px] font-black uppercase">{t('phonenum')}</Label>
                     <Input value={newWallet.accountNumber} onChange={e => setNewWallet({ ...newWallet, accountNumber: e.target.value })} placeholder="079XXXXXXX" className="h-11 bg-background font-mono" dir="ltr" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase">اسم المستلم</Label>
-                    <Input value={newWallet.holderName} onChange={e => setNewWallet({ ...newWallet, holderName: e.target.value })} placeholder="الاسم كما يظهر في الحوالة" className="h-11 bg-background" />
+                    <Label className="text-[10px] font-black uppercase">{t('userName')}</Label>
+                    <Input value={newWallet.holderName} onChange={e => setNewWallet({ ...newWallet, holderName: e.target.value })} placeholder={t('namePayment')} className="h-11 bg-background" />
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button className="flex-1 font-black" onClick={handleAddWallet}>اعتماد الوسيلة</Button>
-                  <Button variant="ghost" onClick={() => setIsAddingWallet(false)}>إلغاء</Button>
+                  <Button className="flex-1 font-black" onClick={handleAddWallet}>{t('confirmWallet')}</Button>
+                  <Button variant="ghost" onClick={() => setIsAddingWallet(false)}>{t('cancel')}</Button>
                 </div>
               </div>
             )}
@@ -635,27 +272,27 @@ export default function CarrierPermanentPage() {
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="financials" className="border-primary/10 rounded-2xl bg-muted/10 px-4">
                 <AccordionTrigger className="font-black text-sm hover:no-underline text-primary">
-                  <div className="flex items-center gap-2"><Wallet className="h-4 w-4" /> تفاصيل التسعير والعربون</div>
+                  <div className="flex items-center gap-2"><Wallet className="h-4 w-4" /> {t('pricingTitle')}</div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-6 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <FormField control={form.control} name="price" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold">سعر المقعد</FormLabel>
+                        <FormLabel className="text-xs font-bold">{t('seatPrice')}</FormLabel>
                         <FormControl><Input className="h-12 bg-background font-black text-lg" type="number" {...field} value={field.value ?? ''} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="currency" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold">العملة</FormLabel>
+                        <FormLabel className="text-xs font-bold">{t('currency')}</FormLabel>
                         <FormControl><Input className="h-12 bg-background font-mono" {...field} /></FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="depositPercentage" render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs font-bold">نسبة العربون</FormLabel>
+                        <FormLabel className="text-xs font-bold"> {t('depositPercentage')}</FormLabel>
                         <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
                           <FormControl><SelectTrigger className="h-12 bg-background"><SelectValue /></SelectTrigger></FormControl>
                           <SelectContent>
@@ -674,26 +311,26 @@ export default function CarrierPermanentPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-muted-foreground">حمولة الأمتعة (لكل مقعد)</Label>
+                <Label className="text-xs font-black uppercase text-muted-foreground">{t('bagsLabel')}</Label>
                 <Select value={formData.bagsPerSeat} onValueChange={val => setFormData({ ...formData, bagsPerSeat: val })}>
                   <SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="0">بدون حقائب</SelectItem>
-                    <SelectItem value="1">حقيبة واحدة</SelectItem>
-                    <SelectItem value="2">حقيبتان</SelectItem>
-                    <SelectItem value="3">3 حقائب</SelectItem>
+                    <SelectItem value="0">{t('bagsNone')}</SelectItem>
+                    <SelectItem value="1">{t('bags1')}</SelectItem>
+                    <SelectItem value="2">{t('bags2')}</SelectItem>
+                    <SelectItem value="3">{t('bags3')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-muted-foreground">عدد محطات التوقف</Label>
+                <Label className="text-xs font-black uppercase text-muted-foreground">{t('stopsLabel')}</Label>
                 <Select value={formData.numberOfStops} onValueChange={val => setFormData({ ...formData, numberOfStops: val })}>
                   <SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="0">رحلة مباشرة</SelectItem>
-                    <SelectItem value="1">توقف واحد</SelectItem>
-                    <SelectItem value="2">توقفين</SelectItem>
-                    <SelectItem value="3">3 توقفات</SelectItem>
+                    <SelectItem value="0"> {t('stopsNone')}</SelectItem>
+                    <SelectItem value="1">{t('stops1')} </SelectItem>
+                    <SelectItem value="2">{t('stops2')}</SelectItem>
+                    <SelectItem value="3">{t('stops3')} </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -701,7 +338,7 @@ export default function CarrierPermanentPage() {
           </Form>
 
           <Button className="w-full h-16 text-xl font-black rounded-3xl shadow-2xl gap-3 transition-all active:scale-95" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? <Loader2 className="animate-spin h-6 w-6" /> : <><Save className="h-6 w-6" /> تشميع الإعدادات المهنية</>}
+            {isSaving ? <Loader2 className="animate-spin h-6 w-6" /> : <><Save className="h-6 w-6" /> {t('saveBtn')}</>}
           </Button>
 
         </CardContent>
