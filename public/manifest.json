@@ -1,10 +1,12 @@
 {
-  "name": "Safar Gate | بوابة سفريات",
+  "name": "سفريات — الوسيط الأول للسفر البري",
   "short_name": "سفريات",
-  "description": "منصة الوساطة الذكية للمسافرين والناقلين",
-  "start_url": "/",
+  "description": "احجز رحلتك البرية بسهولة مع أفضل الناقلين بأسعار شفافة في جميع أنحاء المنطقة",
+  "start_url": "/ar",
+  "id": "/ar",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#321018",
   "theme_color": "#321018",
   "orientation": "portrait",
@@ -81,5 +83,13 @@
     }
   ],
   "screenshots": [],
-  "shortcuts": []
+  "shortcuts": [
+    {
+      "name": "احجز رحلة",
+      "short_name": "حجز",
+      "description": "ابدأ حجز رحلة جديدة",
+      "url": "/ar",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ]
 }
