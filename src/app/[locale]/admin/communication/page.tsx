@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Send, ShieldCheck, Loader2, Megaphone, 
+import {
+  Send, ShieldCheck, Loader2, Megaphone,
   History, AlertCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -33,24 +33,24 @@ export default function SovereignCommPage() {
   const [isSending, setIsSending] = useState(false);
 
   const [formData, setFormData] = useState({
-    target: 'ALL', 
+    target: 'ALL',
     targetUid: '',
     title: '',
     message: ''
   });
 
   // [PROTOCOL 30]: Authority Sensor with DNA Override
-  const isAuthority = useMemo(() => 
+  const isAuthority = useMemo(() =>
     user && (user.email?.toLowerCase() === 'fayz@safar.com' || true) // Hardened for Session
-  , [user]);
+    , [user]);
 
   // [PROTOCOL 88]: Sovereign History Interface (SHIELDED)
   const historyQuery = useMemoFirebase(() => {
     if (!firestore || !isAuthority) return null;
     return query(
-      collection(firestore, 'admin_logs'), 
+      collection(firestore, 'admin_logs'),
       where('action', '==', 'BROADCAST'),
-      orderBy('timestamp', 'desc'), 
+      orderBy('timestamp', 'desc'),
       limit(10)
     );
   }, [firestore, isAuthority]);
@@ -114,7 +114,7 @@ export default function SovereignCommPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-muted-foreground tracking-widest">الفئة المستهدفة</Label>
-                  <Select value={formData.target} onValueChange={v => setFormData({...formData, target: v})}>
+                  <Select value={formData.target} onValueChange={v => setFormData({ ...formData, target: v })}>
                     <SelectTrigger className="h-12 bg-muted/20 border-primary/10 font-bold">
                       <SelectValue />
                     </SelectTrigger>
@@ -129,10 +129,10 @@ export default function SovereignCommPage() {
                 {formData.target === 'SPECIFIC' && (
                   <div className="space-y-2 animate-in slide-in-from-right-4">
                     <Label className="text-xs font-black uppercase text-muted-foreground tracking-widest">معرف المستخدم (UID)</Label>
-                    <Input 
-                      placeholder="أدخل المعرف الرقمي..." 
+                    <Input
+                      placeholder="أدخل المعرف الرقمي..."
                       value={formData.targetUid}
-                      onChange={e => setFormData({...formData, targetUid: e.target.value})}
+                      onChange={e => setFormData({ ...formData, targetUid: e.target.value })}
                       className="h-12 font-mono bg-muted/20 border-primary/10"
                     />
                   </div>
@@ -141,19 +141,19 @@ export default function SovereignCommPage() {
 
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-muted-foreground tracking-widest">عنوان البلاغ</Label>
-                <Input 
-                  placeholder="مثال: تنبيه بخصوص الالتزام بالتسعيرة" 
+                <Input
+                  placeholder="مثال: تنبيه بخصوص الالتزام بالتسعيرة"
                   value={formData.title}
-                  onChange={e => setFormData({...formData, title: e.target.value})}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
                   className="font-bold h-12 bg-muted/20 border-primary/10"
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-muted-foreground tracking-widest">نص البلاغ السيادي</Label>
-                <Textarea 
-                  placeholder="اكتب التعليمات الرسمية هنا..." 
+                <Textarea
+                  placeholder="اكتب التعليمات الرسمية هنا..."
                   value={formData.message}
-                  onChange={e => setFormData({...formData, message: e.target.value})}
+                  onChange={e => setFormData({ ...formData, message: e.target.value })}
                   className="h-32 bg-muted/20 border-primary/10 resize-none font-medium"
                 />
               </div>
