@@ -236,7 +236,7 @@ export function AppLayout({ children, profile, user, isEngaged = false, engageme
                 />
               </div>
             </div> :
-            <div className={`flex items-center gap-2 absolute left-1/2 transform -translate-x-60 ${locale === "ar" ? "ml-8" : "-ml-10"} md:ms-0 md:static md:transform-none  mt-5`}>
+            <div className={`flex items-center gap-2 absolute left-1/2 transform  ${locale === "ar" ? "ml-8 -translate-x-60" : "-ml-10 translate-x-36"}  md:static md:transform-none  mt-5`}>
               <div>
                 <Image
                   src="/logo.png"
