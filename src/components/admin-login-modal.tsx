@@ -168,7 +168,7 @@ export function AdminLoginModal({ open, onClose }: AdminLoginModalProps) {
     const ta = useTranslations();
     const isRTL = locale === 'ar';
 
-    const [email, setEmail] = useState('FAYZ@safar.com');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -206,13 +206,7 @@ export function AdminLoginModal({ open, onClose }: AdminLoginModalProps) {
             <DialogContent className="max-w-md">
                 <form onSubmit={handleAdminLogin}>
                     <DialogHeader>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className={`absolute top-3 border-0 text-[#BFAF78] hover:text-white transition-colors ${isRTL ? 'left-5' : 'right-5'}`}
-                            aria-label="Close"
-                        >✕</button>
-                        <DialogTitle className="flex items-center gap-2">
+                        <DialogTitle className="flex items-center gap-2 pt-4">
                             <Shield className="h-6 w-6 text-primary" aria-hidden="true" />
                             {ta('admin.login')}
                         </DialogTitle>

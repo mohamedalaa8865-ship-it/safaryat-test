@@ -159,7 +159,7 @@ export function AppLayout({ children, profile, user, isEngaged = false, engageme
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-y-auto">
       <header className="fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
+        <div className="container mx-auto pt-2 flex h-16 items-center justify-between px-4">
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -236,7 +236,7 @@ export function AppLayout({ children, profile, user, isEngaged = false, engageme
                 />
               </div>
             </div> :
-            <div className={`flex items-center gap-2 absolute left-1/2 transform  ${locale === "ar" ? "ml-8 -translate-x-60" : "-ml-10 translate-x-36"}  md:static md:transform-none  mt-5`}>
+            <div className={`flex items-center gap-2 absolute left-1/2 transform  ${locale === "ar" ? "ml-8 -translate-x-52" : "-ml-10 translate-x-28"}  md:static md:transform-none  mt-5`}>
               <div>
                 <Image
                   src="/logo.png"

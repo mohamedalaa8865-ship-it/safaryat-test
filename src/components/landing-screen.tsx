@@ -31,7 +31,7 @@ export default function LandingScreen() {
   const auth = useAuth();
   const firestore = useFirestore();
   const [showAdminModal, setShowAdminModal] = useState(false);
-  const [email, setEmail] = useState('FAYZ@safar.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
