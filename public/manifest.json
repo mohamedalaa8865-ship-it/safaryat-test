@@ -10,6 +10,8 @@
   "orientation": "portrait",
   "lang": "ar",
   "dir": "rtl",
+  "prefer_related_applications": false,
+  "categories": ["travel", "transportation"],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -38,6 +40,12 @@
     {
       "src": "/icons/icon-152x152.png",
       "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-180x180.png",
+      "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"
     },
@@ -71,5 +79,7 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "shortcuts": []
 }
