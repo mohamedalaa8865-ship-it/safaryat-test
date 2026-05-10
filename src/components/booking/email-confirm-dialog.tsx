@@ -60,7 +60,7 @@ export function EmailConfirmDialog({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[420px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
+          <DialogTitle className="flex items-center gap-2 text-lg pt-3">
             <Mail className="h-5 w-5 text-primary" />
             {t('confirmEmailTitle')}
           </DialogTitle>

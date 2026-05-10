@@ -523,7 +523,7 @@ export function OfferDialog({ isOpen, onOpenChange, trip, onSendOffer }: OfferDi
                   <FormControl>
                     <Input type="number" {...field} disabled className="bg-muted/50 cursor-not-allowed" />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">مدة الرحلة المحددة عند إنشاء الرحلة</p>
+                  <p className="text-xs text-muted-foreground">{t('tripDuration')}</p>
                   <FormMessage />
                 </FormItem>
               )} />

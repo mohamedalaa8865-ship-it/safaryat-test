@@ -428,6 +428,7 @@ export interface Trip {
   origin: string;
   destination: string;
   departureDate: string;
+  departureTime?: string;
   status: "Planned" | "In-Transit" | "Completed" | "Cancelled" | "Awaiting-Offers" | "Offer-Received" | "Pending-Carrier-Confirmation";
   passengers?: number;
   passengersDetails?: PassengerDetails[];

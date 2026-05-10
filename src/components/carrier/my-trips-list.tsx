@@ -462,7 +462,7 @@ function OpportunityRow({ opportunity, carrierId, isOpen, onToggle, onOffer }: {
           </div>
           {(traveler?.phoneNumber) && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">{'الهاتف'}</span>
+              <span className="text-muted-foreground">{t('phoneTrev')}</span>
               <span className="font-semibold font-mono" dir="ltr">
                 {traveler.phoneCountryCode ? `+${traveler.phoneCountryCode}` : ''}{traveler.phoneNumber}
               </span>
