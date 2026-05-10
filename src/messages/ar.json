@@ -399,7 +399,9 @@
     "stopStation": "محطة توقف.",
     "cancel": "إلغاء",
     "endTrip": "⛔ الرحلة انتهت",
-    "pendingVerification": "دفع — بانتظار الختم"
+    "pendingVerification": "دفع — بانتظار الختم",
+    "phoneTrev": "الهاتف",
+    "tripDuration": "مدة الرحلة المحددة عند إنشاء الرحلة"
   },
   "agent": {
     "title": "وكيل"

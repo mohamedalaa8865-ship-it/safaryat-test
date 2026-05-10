@@ -450,7 +450,9 @@
     "tripsWithStops": "Trip includes",
     "stopStation": "stop(s).",
     "endTrip": "End Trip ⛔",
-    "pendingVerification": "Paid — awaiting seal"
+    "pendingVerification": "Paid — awaiting seal",
+    "phoneTrev": "phone",
+    "tripDuration": "The trip duration is specified when the trip was created."
   },
   "offerCard": {
     "cheapest": "Best Price",
