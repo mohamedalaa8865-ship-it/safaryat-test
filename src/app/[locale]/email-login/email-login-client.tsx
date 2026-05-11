@@ -194,15 +194,15 @@ export default function EmailLoginPage() {
                     </div>
                 </div>
                 <div className="text-center pt-3">
-                    <p className="text-xs text-muted-foreground">
-                        {locale === 'ar' ? 'اذا لم يكن لديك حساب ؟ ' : `If you don't have an account?`}
+                    <p className="text-lg text-muted-foreground">
+                        {locale === 'ar' ? 'اذا لم يكن لديك حساب ؟ ' : `If you don't have an account? `}
                         <button
                             type="button"
                             // onClick={() => router.push(`/${locale}/login?role=carrier`)}
                             onClick={() => router.push(`/login?role=${selectedRole}`)}
                             className="text-primary underline font-bold hover:opacity-80"
                         >
-                            {locale === 'ar' ? 'أنشاء حساب الان من هنا' : 'Create an account now from here'}
+                            {locale === 'ar' ? 'أنشاء حساب جديد' : 'Create now account'}
                         </button>
                     </p>
                 </div>

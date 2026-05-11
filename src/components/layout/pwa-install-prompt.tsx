@@ -335,3 +335,176 @@ export function PwaInstallPrompt() {
 //     </div>
 //   );
 // }
+
+// 'use client';
+
+// import { useState, useEffect, useCallback } from 'react';
+// import { Button } from '@/components/ui/button';
+// import { Download, X, Sparkles } from 'lucide-react';
+// import { triggerHaptic } from '@/lib/utils';
+// import { useTranslations } from 'next-intl';
+
+// // ✅ خليه false في الإنتاج عشان الشريط ميظهرش كل شوية
+// const DEBUG_MODE = false;
+
+// export function PwaInstallPrompt() {
+//   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+//   const [isIOS, setIsIOS] = useState(false);
+//   const [isStandalone, setIsStandalone] = useState(true);
+//   const [showPrompt, setShowPrompt] = useState(false);
+//   const t = useTranslations('pwa');
+
+//   const dismiss = useCallback((e?: React.MouseEvent | React.PointerEvent) => {
+//     // إيقاف انتشار الحدث عشان النوافذ المنبثقة (Dialogs) متمنعش الضغطة
+//     if (e) {
+//       e.preventDefault();
+//       e.stopPropagation();
+//     }
+
+//     // استخدام try-catch عشان لو الـ Haptic أو الـ LocalStorage فيهم مشكلة الكود ميهنجش
+//     try { triggerHaptic('light'); } catch (_) { }
+
+//     setShowPrompt(false);
+
+//     if (!DEBUG_MODE) {
+//       try {
+//         localStorage.setItem('pwa_prompt_dismissed', Date.now().toString());
+//       } catch (_) { }
+//     }
+//   }, []);
+
+//   useEffect(() => {
+//     if (typeof window === 'undefined') return;
+
+//     const isAppMode =
+//       window.matchMedia('(display-mode: standalone)').matches ||
+//       (window.navigator as any).standalone === true;
+
+//     setIsStandalone(isAppMode);
+//     if (isAppMode) return;
+
+//     if (!DEBUG_MODE) {
+//       try {
+//         const dismissed = localStorage.getItem('pwa_prompt_dismissed');
+//         if (dismissed) {
+//           const age = Date.now() - parseInt(dismissed);
+//           if (age < 7 * 24 * 60 * 60 * 1000) return; // إخفاء لمدة 7 أيام
+//         }
+//       } catch (_) { }
+//     }
+
+//     const ua = window.navigator.userAgent.toLowerCase();
+//     const isAppleDevice =
+//       /iphone|ipad|ipod/.test(ua) ||
+//       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+//     setIsIOS(isAppleDevice);
+
+//     if (isAppleDevice) {
+//       const timer = setTimeout(() => setShowPrompt(true), 8000);
+//       return () => clearTimeout(timer);
+//     } else {
+//       const saved = (window as any).__pwaPrompt;
+//       if (saved) {
+//         setDeferredPrompt(saved);
+//         const timer = setTimeout(() => setShowPrompt(true), 3000);
+//         return () => clearTimeout(timer);
+//       }
+
+//       const handler = (e: any) => {
+//         e.preventDefault();
+//         (window as any).__pwaPrompt = e;
+//         setDeferredPrompt(e);
+//         const timer = setTimeout(() => setShowPrompt(true), 3000);
+//         return () => clearTimeout(timer);
+//       };
+//       window.addEventListener('beforeinstallprompt', handler);
+//       return () => window.removeEventListener('beforeinstallprompt', handler);
+//     }
+//   }, []);
+
+//   const handleInstall = async (e: React.MouseEvent) => {
+//     e.stopPropagation();
+//     try { triggerHaptic('light'); } catch (_) { }
+//     if (!deferredPrompt) return;
+//     deferredPrompt.prompt();
+//     const { outcome } = await deferredPrompt.userChoice;
+//     if (outcome === 'accepted') setShowPrompt(false);
+//     setDeferredPrompt(null);
+//   };
+
+//   if (isStandalone || !showPrompt) return null;
+
+//   return (
+//     <div
+//       role="dialog"
+//       aria-modal="true"
+//       aria-label={t('title')}
+//       // تمت إضافة pointer-events-auto هنا لضمان استجابة الشريط للضغطات حتى لو كان هناك Dialog مفتوح
+//       className="fixed bottom-20 left-4 right-4 bg-card border-2 border-primary/30 p-4 rounded-2xl shadow-2xl z-[9999] pointer-events-auto animate-in slide-in-from-bottom-10 duration-500"
+//       onPointerDown={(e) => e.stopPropagation()} // منع الـ Dialog من إغلاق نفسه إذا ضغطت هنا
+//     >
+//       <div className="flex items-start gap-3">
+//         <div aria-hidden="true" className="h-11 w-11 bg-primary/10 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+//           <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+//         </div>
+
+//         <div className="flex-1 min-w-0">
+//           <h4 className="text-sm font-bold mb-1">{t('title')}</h4>
+
+//           {isIOS ? (
+//             <div className="text-[11px] text-muted-foreground leading-relaxed">
+//               <p className="mb-1.5">{t('androidDesc')}</p> {/* عدّل هذه لتكون ترجمة iOS إذا توفرت */}
+//               <ol className="flex flex-col gap-1">
+//                 <li className="flex items-center gap-1.5">
+//                   <span aria-hidden="true" className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">١</span>
+//                   <span>{t('step1')}</span>
+//                 </li>
+//                 <li className="flex items-center gap-1.5">
+//                   <span aria-hidden="true" className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">٢</span>
+//                   <span>{t('step2')}</span>
+//                 </li>
+//                 <li className="flex items-center gap-1.5">
+//                   <span aria-hidden="true" className="w-4 h-4 rounded-full bg-primary/20 text-primary text-[9px] flex items-center justify-center font-bold shrink-0">٣</span>
+//                   <span>{t('step3')}</span>
+//                 </li>
+//               </ol>
+//             </div>
+//           ) : (
+//             <p className="text-[11px] text-muted-foreground leading-relaxed">
+//               {t('androidDesc')}
+//             </p>
+//           )}
+//         </div>
+
+//         <button
+//           onClick={dismiss}
+//           aria-label={t('dismiss')}
+//           className="text-muted-foreground hover:text-foreground p-1 -mt-1 -mr-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+//         >
+//           <X className="h-4 w-4" aria-hidden="true" />
+//         </button>
+//       </div>
+
+//       <div className="flex gap-2 mt-3">
+//         {!isIOS && (
+//           <Button
+//             onClick={handleInstall}
+//             size="sm"
+//             className="flex-1 h-8 text-xs font-black gap-1.5 focus-visible:ring-2 focus-visible:ring-primary"
+//             aria-label={t('install')}
+//           >
+//             <Download className="h-3.5 w-3.5" aria-hidden="true" />
+//             {t('install')}
+//           </Button>
+//         )}
+//         <button
+//           onClick={dismiss}
+//           className="text-xs text-muted-foreground hover:text-foreground font-medium px-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+//         >
+//           {t('later')}
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }
