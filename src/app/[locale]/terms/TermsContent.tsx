@@ -19,7 +19,7 @@ export default function TermsContent() {
     // [SCR-952] THE ATOMIC BINDING
     triggerHaptic('success');
     localStorage.setItem('termsAgreed', 'true');
-    
+
     // الانتقال للوراء لاستئناف عملية التسجيل مع تفعيل النبض العصبي
     router.back();
   };
@@ -43,7 +43,7 @@ export default function TermsContent() {
         <CardContent className="p-0">
           <ScrollArea className="h-[60vh] p-8">
             <div className="space-y-10 text-right leading-relaxed">
-              
+
               {/* الباب الأول */}
               <section className="space-y-4">
                 <h3 className="flex items-center gap-2 text-xl font-black text-primary border-b border-primary/10 pb-2">
@@ -147,7 +147,7 @@ export default function TermsContent() {
 
         {/* زر الموافقة المشمع */}
         <div className="p-8 border-t bg-muted/20">
-          <Button 
+          <Button
             className="w-full h-16 text-xl font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all gap-3"
             onClick={handleAgree}
           >

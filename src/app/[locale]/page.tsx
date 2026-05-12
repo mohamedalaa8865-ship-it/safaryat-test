@@ -192,7 +192,7 @@ export default function LandingPage() {
         <div className="h-16 flex items-center justify-center pt-5">
           {/* ✅ priority للـ logo عشان يتحمل أول حاجة */}
           <Image src={LOGO_URL} alt="Safar Gate - Land Travel Booking" width={320} height={80}
-            className="h-36 w-auto object-contain cursor-pointer" priority onClick={() => setShowAdminModal(true)} />
+            className="h-36 w-auto object-contain cursor-pointer" priority onDoubleClick={() => setShowAdminModal(true)} />
         </div>
         <div className="hidden sm:flex items-center gap-3">
           <LanguageSwitcher />

@@ -2886,13 +2886,13 @@ function TripCard({ trip, onEdit, carrierProfile }: { trip: Trip; onEdit: (trip:
             )}
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <div className="flex gap-1 items-center">
               <UserCircle className="size-4 text-primary" />
               <h3 className="text-sm font-bold">{t('clientRequests')}</h3>
             </div>
             <DirectOpportunities trip={trip} carrierId={carrierId} />
-          </div>
+          </div> */}
 
           <div className="space-y-2">
             <div className="flex gap-1 items-center">
