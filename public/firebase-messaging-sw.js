@@ -89,6 +89,7 @@ messaging.onBackgroundMessage((payload) => {
     renotify: true,
     vibrate: [200, 100, 200],
     data: { url },
+    sound: "default", // 👈 هذا السطر ضروري جداً لتشغيل صوت نظام الموبايل الافتراضي
   });
 });
 
