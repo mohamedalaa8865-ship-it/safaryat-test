@@ -313,7 +313,6 @@
     "name": "Name",
     "phone": "Phone Number"
   },
-
   "bookingActionCard": {
     "status": {
       "pendingCarrier": "Awaiting Approval",
@@ -804,7 +803,6 @@
     "createRequest": "High demand. Best option is to create an official request.",
     "searchWholeCountry": "Search entire country (same day)",
     "searchNext3Days": "Search next 3 days (same city)",
-
     "sendOriginalRequest": "Send Request with Original Specs",
     "backToExact": "Back to Exact Search",
     "market": "Market is Waiting",
@@ -1262,5 +1260,16 @@
       "swipeToCompare": "Swipe to Compare",
       "offerAvailiable": " Offers Currently Available"
     }
+  },
+  "carrierTrustSheet": {
+    "title": "Trust & Credibility Record",
+    "description": "Performance history based on verified traveler ratings.",
+    "noReviews": "No ratings recorded for this carrier yet.",
+    "loadMore": "Load More Ratings",
+    "traveler": "Traveler",
+    "price": "Price",
+    "vehicle": "Vehicle",
+    "noComment": "No comment provided",
+    "bronze": "BRONZE"
   }
 }
