@@ -16,6 +16,8 @@ import { useRouter } from '@/i18n/routing';
 import { cn } from '@/lib/utils';
 import type { Notification } from '@/lib/data';
 import { useTranslations } from 'next-intl';
+import { useEffect } from 'react';
+
 const notifIcons: Record<string, string> = {
   booking_confirmed: '✅',
   new_booking_request: '🎟️',
@@ -36,6 +38,19 @@ export function NotificationBell() {
   const { notifications, unreadCount, markAllAsRead, markOneAsRead } = useNotifications();
   const router = useRouter();
   const t = useTranslations('common');
+  // 🔴 إضافة هذا الكود لتحديث الشارة (Badge) على أيقونة التطبيق في الموبايل
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'setAppBadge' in navigator) {
+      if (unreadCount > 0) {
+        // وضع العدد على أيقونة التطبيق من الخارج
+        navigator.setAppBadge(unreadCount).catch(console.error);
+      } else {
+        // إزالة الشارة إذا كان العدد صفر
+        navigator.clearAppBadge().catch(console.error);
+      }
+    }
+  }, [unreadCount]);
   // [SC-707] Stratified Sorting Logic: Sovereign items override time sorting
   const sortedNotifications = useMemo(() => {
     return [...notifications].sort((a, b) => {

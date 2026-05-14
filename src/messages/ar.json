@@ -52,7 +52,8 @@
     "dec": "أيها المسافر، تم نقل رحلتك لقائد بديل لضمان وصولك الآمن. بياناتك ومستحقاتك محمية بختم سفريات السيادي.",
     "viaChat": "عبر الدردشة فقط",
     "mainStation": "المحطة الرئيسية",
-    "accessConfirmed": " أكدت الوصول (تحرير المسار)"
+    "accessConfirmed": " أكدت الوصول (تحرير المسار)",
+    "time": "الموعد المحدد"
   },
   "ConfirmBooking": {
     "accptReq": "تم توثيق الطلب بنجاح!",
@@ -788,6 +789,35 @@
     "activeTrip": "لديك رحلة نشطة بالفعل",
     "activeTripDesc": "سياسة المنصة لا تسمح بوجود أكثر من رحلة نشطة في نفس الوقت.",
     "bookings": " صندوق المهام "
+  },
+  "rateTrip": {
+    "ratingRequiredTitle": "التقييم مطلوب",
+    "ratingRequiredDesc": "يرجى اختيار عدد النجوم.",
+    "missingInfoTitle": "معلومات ناقصة",
+    "missingInfoDesc": "يرجى الإجابة على أسئلة الالتزام.",
+    "successTitle": "✅ تم إرسال التقييم بنجاح",
+    "successDesc": "شكراً! تقييمك سيظهر في رحلات الناقل القادمة.",
+    "failTitle": "فشل الإرسال",
+    "failDesc": "حدث خطأ أثناء حفظ التقييم.",
+    "ratedSuccessTitle": "تم تقييم الرحلة!",
+    "youGaveCaptain": "أعطيت الكابتن",
+    "stars": "نجوم",
+    "ratingVisibilityNote": "تقييمك سيظهر للمسافرين الآخرين في رحلات هذا الناقل",
+    "bookNewTrip": "احجز رحلة جديدة الآن",
+    "close": "إغلاق",
+    "dialogTitle": "كيف كانت رحلتك؟",
+    "dialogDesc1": "تقييمك للكابتن",
+    "dialogDesc2": "يساعد المسافرين الآخرين.",
+    "star1": "سيء جداً",
+    "star2": "سيء",
+    "star3": "مقبول",
+    "star4": "جيد",
+    "star5": "ممتاز! 🎉",
+    "priceAdherence": "هل التزم بالسعر؟",
+    "vehicleMatch": "هل المركبة مطابقة؟",
+    "notesPlaceholder": "اكتب ملاحظاتك هنا (اختياري)...",
+    "skip": "تخطي",
+    "submit": "إرسال التقييم"
   },
   "subscriptionCard": {
     "active": {
