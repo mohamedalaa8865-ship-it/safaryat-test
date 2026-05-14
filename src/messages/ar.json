@@ -739,7 +739,6 @@
     "createRequest": "يبدو أن الضغط عالٍ. الخيار الأفضل الآن هو إنشاء طلب رسمي ليصل للناقلين.",
     "searchWholeCountry": "بحث شامل في كل الدولة (نفس اليوم)",
     "searchNext3Days": "بحث في الأيام الـ 3 القادمة (نفس المدينة)",
-
     "sendOriginalRequest": "إرسال طلب للمواصفات الأصلية",
     "backToExact": "العودة للبحث الدقيق",
     "marketWaiting": "السوق بانتظارك",
@@ -1139,7 +1138,6 @@
     "messageCarrier": "مراسلة الناقل",
     "": ""
   },
-
   "bookingActionCard": {
     "status": {
       "pendingCarrier": "بانتظار موافقتك",
@@ -1276,5 +1274,16 @@
       "swipeToCompare": "اسحب للمقارنة بين",
       "offerAvailiable": " عروض متوفرة حالياً"
     }
+  },
+  "carrierTrustSheet": {
+    "title": "سجل الثقة والمصداقية",
+    "description": "تاريخ الأداء بناءً على تقييمات المسافرين الموثقة.",
+    "noReviews": "لا توجد تقييمات مسجلة لهذا الناقل بعد.",
+    "loadMore": "عرض المزيد من التقييمات",
+    "traveler": "مسافر",
+    "price": "السعر",
+    "vehicle": "المركبة",
+    "noComment": "• • •",
+    "bronze": "BRONZE"
   }
 }
