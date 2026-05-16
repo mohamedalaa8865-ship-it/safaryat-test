@@ -405,30 +405,83 @@ export function useLogin() {
     }
   }, [searchParams]);
 
-  const handleCheckPhone = async () => {
-    if (!formData.phone || formData.phone.length < 9 || !db) {
+  // const handleCheckPhone = async () => {
+  //   if (!formData.phone || formData.phone.length < 9 || !db) {
+  //     toast({ variant: "destructive", title: t("common.error"), description: t("errors.invalidPhone") });
+  //     return { success: false, isReturningUser: false };
+  //   }
+  //   setLoading(true);
+  //   try {
+  //     const checkResult = await checkUserExistence(db, formData.phone, auth);
+  //     setLoading(false);
+  //     if (checkResult.exists && checkResult.data) {
+  //       setReturningUser(checkResult.data as UserProfile);
+  //       setStep("authenticate");
+  //       return { success: true, isReturningUser: true };
+  //     } else {
+  //       setStep("name");
+  //       return { success: true, isReturningUser: false };
+  //     }
+  //   } catch (error) {
+  //     setLoading(false);
+  //     toast({ variant: "destructive", title: t("common.error"), description: t("errors.serverError") });
+  //     return { success: false, isReturningUser: false };
+  //   }
+  // };
+  // أضف هذه الاستيرادات في أعلى الملف إذا لم تكن موجودة (في حال كنت تستخدم Firebase Firestore)
+  // import { collection, query, where, getDocs } from "firebase/firestore";
+
+  const handleCheckPhone = async (): Promise<{ success: boolean; isReturningUser: boolean; errorCode?: string; message?: string }> => {
+    if (!formData.phone || formData.phone.length < 7 || !db) {
       toast({ variant: "destructive", title: t("common.error"), description: t("errors.invalidPhone") });
       return { success: false, isReturningUser: false };
     }
+
     setLoading(true);
     try {
+      // 1. التحقق من وجود رقم الهاتف (كودك الأصلي)
       const checkResult = await checkUserExistence(db, formData.phone, auth);
-      setLoading(false);
+
       if (checkResult.exists && checkResult.data) {
         setReturningUser(checkResult.data as UserProfile);
         setStep("authenticate");
+        setLoading(false);
         return { success: true, isReturningUser: true };
       } else {
+        // --- هنا اليوزر جديد (رقم الهاتف غير مسجل) ---
+        // 2. نقوم بالتحقق من الإيميل والاسم قبل الموافقة
+
+        // التحقق من الإيميل
+        if (formData.email) {
+          const emailQuery = query(collection(db, "users"), where("email", "==", formData.email.trim()));
+          const emailSnapshot = await getDocs(emailQuery);
+          if (!emailSnapshot.empty) {
+            setLoading(false);
+            return { success: false, isReturningUser: false, errorCode: "EMAIL_EXISTS" };
+          }
+        }
+
+        // التحقق من الاسم
+        if (formData.firstName) {
+          const nameQuery = query(collection(db, "users"), where("firstName", "==", formData.firstName.trim()));
+          const nameSnapshot = await getDocs(nameQuery);
+          if (!nameSnapshot.empty) {
+            setLoading(false);
+            return { success: false, isReturningUser: false, errorCode: "NAME_EXISTS" };
+          }
+        }
+
+        // إذا كان الإيميل والاسم غير موجودين مسبقاً، نسمح له بالمرور
         setStep("name");
+        setLoading(false);
         return { success: true, isReturningUser: false };
       }
     } catch (error) {
       setLoading(false);
       toast({ variant: "destructive", title: t("common.error"), description: t("errors.serverError") });
-      return { success: false, isReturningUser: false };
+      return { success: false, isReturningUser: false, errorCode: "SERVER_ERROR", message: "حدث خطأ في الخادم" };
     }
   };
-
   const handleRegister = async () => {
     if (!formData.agreed || !db || !auth) return;
     setLoading(true);

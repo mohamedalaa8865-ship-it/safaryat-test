@@ -453,7 +453,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-24 px-4" aria-labelledby="cta-heading">
+      {/* <section className="py-24 px-4" aria-labelledby="cta-heading">
         <div className="max-w-4xl mx-auto">
           <div className="rounded-3xl p-12 text-center bg-gradient-to-br shadow-md shadow-black from-[#3d1010] to-[#2d0a0a] border border-[#BFAF78]">
             <h2 id="cta-heading" className="text-3xl md:text-4xl font-bold mb-4 text-[#f5edd6]">{t('cta.title')}</h2>
@@ -471,10 +471,10 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* ── Contact ── */}
-      <section className="py-20 sm:py-28 px-4 bg-[#200707]" aria-labelledby="contact-heading">
+      <section className="py-20 sm:py-28 px-4 bg-[#321018]" aria-labelledby="contact-heading">
         <div className="max-w-6xl mx-auto">
           <AnimatedSection>
             <h2 id="contact-heading" className="text-center text-3xl sm:text-4xl font-bold mb-16 text-white">
@@ -497,7 +497,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-[#BFAF78] py-12 px-4" role="contentinfo">
+      <footer className="border-t border-[#BFAF78] bg-[#200707] py-12 px-4" role="contentinfo">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex flex-col items-start gap-2">
