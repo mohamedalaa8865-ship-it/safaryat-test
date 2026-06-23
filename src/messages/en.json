@@ -60,7 +60,10 @@
     "viaChat": "Via chat only",
     "mainStation": "Main Station",
     "accessConfirmed": "Access confirmed (path clearing)",
-    "time": "The scheduled time"
+    "time": "The scheduled time",
+    "flightNumber": "Trip Number",
+    "departureTime": "Departure Time",
+    "date": "Date"
   },
   "rateTrip": {
     "ratingRequiredTitle": "Rating Required",
@@ -154,10 +157,10 @@
   },
   "home": {
     "hero": {
-      "badge": "The region's premier mediator",
-      "title1": "A trusted inter-country travel agent ",
+      "badge": "The first and only regional mediator",
+      "title1": "A trusted intermediary for international travel ",
       "brand": "overland",
-      "subtitle": "Connecting you with the best overland carriers at transparent prices and reliable service across the region.",
+      "subtitle": "You can access the best carriers and the best prices",
       "traveler": "Traveler",
       "travelerDec": "I'm looking for a safe and comfortable trip to my destination",
       "carrier": "Carrier",
@@ -318,7 +321,8 @@
       "pendingCarrier": "Awaiting Approval",
       "pendingPayment": "Awaiting Payment",
       "pendingVerification": "Verify Payment",
-      "confirmed": "Confirmed"
+      "confirmed": "Confirmed",
+      "travelerAccepted": "Traveler Accepted — Awaiting Your Approval"
     },
     "unknownTraveler": "Passenger (Unknown)",
     "traveler": "Passenger",
@@ -443,6 +447,7 @@
     "cancelledNotif": "Your booking has been cancelled 🚫",
     "cancelledByCarrier": "The carrier has cancelled your booking.",
     "goBack": "Go back",
+    "chatGrop": "Trip Group Chat",
     "confirmed": "Confirmed",
     "pendingConfirm": "Pending confirmation",
     "pendingPayment": "Pending payment",
@@ -839,7 +844,14 @@
     "login": "Login",
     "createNew": "Create traveler account",
     "decDialog": "To continue with booking or sending your request, please log in or create a traveler account.",
-    "titleDialog": "You must log in first"
+    "titleDialog": "You must log in first",
+    "titlePassenger": "Passenger Details",
+    "passenger": "Passenger",
+    "adult": "Adult",
+    "child": "Child",
+    "infant": "Infant",
+    "determineTravel": "First, determine your travel itinerary.",
+    "travelDes": "Choose your departure and destination cities to view available flights."
   },
   "carrierLayout": {
     "menu": "Menu",
@@ -858,7 +870,47 @@
     "instagram": "Instagram",
     "activeTrip": "You already have an active trip",
     "activeTripDesc": "Platform policy does not allow more than one active trip at the same time.",
-    "bookings": "Order Box"
+    "bookings": "Order Box",
+    "marketTitle": "Requests Market",
+    "marketDirect": "Direct",
+    "marketFilter": "Filter",
+    "marketActiveFilter": "Active Filter",
+    "marketOrigin": "Origin City",
+    "marketDest": "Destination City",
+    "marketAllReqs": "All Requests",
+    "marketDirectOnly": "Direct to me only",
+    "marketGeneral": "General Market",
+    "marketAllVehicles": "All Vehicles",
+    "marketCar": "Car",
+    "marketBus": "Bus",
+    "marketClearAll": "Clear All Filters",
+    "marketNoResults": "No results for current filter",
+    "marketNoRequests": "No requests at the moment",
+    "marketNoResultsDesc": "Try changing the filter criteria to find suitable requests",
+    "marketNoReqDesc": "Traveler requests will appear here once added. Check back regularly!",
+    "marketShowAll": "Show All Requests",
+    "marketShowMore": "Show More",
+    "marketRemaining": "remaining",
+    "marketTotalReqs": "Total Requests",
+    "marketDirectForYou": "Direct to You",
+    "marketGeneralStat": "General Market",
+    "marketAllCities": "All Cities",
+    "marketReqType": "Request Type",
+    "marketVehicle": "Vehicle",
+    "marketDaysLeft": "days",
+    "marketLeft": "After",
+    "marketExpired": "Expired",
+    "marketPassengers": "Passenger Details",
+    "marketTravelerNotes": "Traveler Notes",
+    "marketSubmitOffer": "Submit Offer",
+    "marketAcceptOffer": "Accept & Set Price",
+    "marketForYou": "For You",
+    "marketAdult": "Adult",
+    "marketChild": "Minor",
+    "marketInfant": "Infant",
+    "marketPassenger": "Passenger",
+    "opportunities": "Opportunities Market",
+    "marketBudget": "Budget"
   },
   "subscriptionCard": {
     "active": {
@@ -946,7 +998,12 @@
     "successAdd": "Trip added successfully!",
     "errorAdd": "Failed to add trip",
     "errorAddDesc": "A cloud error occurred.",
-    "expiredBtn": "Renew Subscription Now"
+    "expiredBtn": "Renew Subscription Now",
+    "pricingOverrideTitle": "Pricing & Deposit Details",
+    "pricingOverrideDesc": "Only open this section if you want to customize pricing for this specific trip.",
+    "pricingOverrideSeatPrice": "Seat Price",
+    "pricingOverrideCurrency": "Currency",
+    "pricingOverrideDeposit": "Deposit %"
   },
   "carrierArchive": {
     "title": "Archive & Records",
@@ -1260,12 +1317,14 @@
       "offersReceived": "{count} offer(s) received. Click to review.",
       "noOffers": "You will be notified as soon as new offers arrive.",
       "withdraw": "Withdraw Request from Market",
-      "havenotReq": "You haven't received any offers yet. We will notify you as soon as any offers arrive",
+      "havenotReq": "To view the offers, you should follow the notifications.",
       "offReceived": "Offers Received"
     },
     "stagnation": {
-      "title": "Request Is Taking Longer Than Usual",
-      "description": "An hour has passed with no offers. The price may be too low or no vehicles are available.",
+      "title": "Based on your request details, there are currently no flights available. You should:",
+      "description": "Wait for an additional period",
+      "description2": "Withdraw the request and search for scheduled flights",
+      "description3": "Modify the request and update the data",
       "searchScheduled": "Search Scheduled Trips"
     },
     "offerDesc": {
@@ -1289,5 +1348,16 @@
     "vehicle": "Vehicle",
     "noComment": "No comment provided",
     "bronze": "BRONZE"
+  },
+  "reqestDaialog": {
+    "title": "Submit a trip request",
+    "desc": "Verify data before submitting and wait for an offer from the carrier",
+    "from": "From",
+    "to": "To",
+    "history": "Date",
+    "totalseats": "Total passengers",
+    "detailstravel": "Passenger details",
+    "nameCarreir": "Carrier name",
+    "typeV": "Vehicle type"
   }
 }
