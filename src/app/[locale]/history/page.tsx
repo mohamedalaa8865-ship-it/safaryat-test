@@ -3379,7 +3379,7 @@ export default function HistoryPage() {
 
                     {engagementType === 'BOOKING' && activeBooking && (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            {(activeBooking.status === 'Traveler-Accepted-Awaiting-Carrier' || activeBooking.status === 'Pending-Carrier-Confirmation') && <PendingConfirmationCard booking={activeBooking} />}
+                            {(activeBooking.status === 'Pending-Carrier-Confirmation') && <PendingConfirmationCard booking={activeBooking} />}
                             {activeBooking.status === 'Pending-Payment' && <PendingPaymentCard booking={activeBooking} onClick={() => { setSelectedBookingForPayment(activeBooking); setIsPaymentDialogOpen(true); }} />}
                             {activeBooking.status === 'Pending-Payment-Verification' && (
                                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 space-y-4">
