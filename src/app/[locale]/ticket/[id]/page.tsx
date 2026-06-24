@@ -3375,7 +3375,8 @@ export default function SmartTicketPage() {
                   onClick={() => setIsPaymentOpen(true)}
                   className="w-full h-16 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xl rounded-3xl shadow-[0_20px_50px_rgba(22,163,74,0.4)] transition-all active:scale-95 flex items-center justify-center gap-3"
                 >
-                  💳 ادفع العربون الآن
+                  {/* 💳 ادفع العربون الآن */}
+                  التالي
                 </button>
               </div>
 

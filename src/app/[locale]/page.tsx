@@ -187,7 +187,7 @@ export default function LandingPage() {
     <main dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-[#321018] text-white font-body">
 
       {/* ── Navbar ── */}
-      <nav className="fixed h-16 rounded-b-lg top-0 pb-6 pt-9  left-0 right-0 z-50 flex items-center justify-between px-6  bg-[#321018]/80 backdrop-blur-md border-b border-[#BFAF78]/20"
+      <nav className="fixed h-16 rounded-b-lg top-0 pb-6 pt-9  left-0 right-0 z-50 flex items-center justify-between px-6  bg-[#BFAF78] backdrop-blur-md border-b border-[#BFAF78]/20"
         aria-label="Main navigation">
         <div className="h-16 flex items-center justify-center pt-5">
           {/* ✅ priority للـ logo عشان يتحمل أول حاجة */}
@@ -197,7 +197,7 @@ export default function LandingPage() {
         <div className="hidden sm:flex items-center gap-3">
           <LanguageSwitcher />
           <Button size="sm" variant="outline"
-            className="border-[#BFAF78] text-[#BFAF78] bg-transparent hover:bg-[#BFAF78]/10 font-bold gap-2"
+            className="border-black text-black bg-transparent hover:bg-[#BFAF78]/10 font-bold gap-2"
             onClick={() => router.push('/email-login?role=agent')}
             aria-label={isRTL ? 'دخول الوكيل' : 'Agent Login'}>
             <Shield className="w-4 h-4" aria-hidden="true" />

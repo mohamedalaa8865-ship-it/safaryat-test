@@ -63,26 +63,26 @@ export default function AgentDashboard() {
         </header>
 
         <LocalErrorBoundary fallbackTitle="تعثر مفاعل الإنجازات">
-          <AgentAchievementPulse
+          {/* <AgentAchievementPulse
             completedTrips={counts.success}
             target={profile?.agentTarget || 50}
             bonus={profile?.agentBonus || 0}
             currency={profile?.currency || 'JOD'}
             isMaster={isMaster}
             firstName={profile?.firstName}
-          />
+          /> */}
         </LocalErrorBoundary>
 
 
 
         <Tabs defaultValue="operations" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-14 bg-card/50 border rounded-[1.5rem] p-1 mb-6 shadow-sm">
+          <TabsList className="grid w-full grid-cols-1 h-14 bg-card/50 border rounded-[1.5rem] p-1 mb-6 shadow-sm">
             <TabsTrigger value="operations" className="font-black text-xs gap-2 data-[state=active]:bg-primary data-[state=active]:text-black rounded-2xl transition-all">
               <Zap className="h-4 w-4" /> رادار العمليات
             </TabsTrigger>
-            <TabsTrigger value="financials" className="font-black text-xs gap-2 data-[state=active]:bg-primary data-[state=active]:text-black rounded-2xl transition-all">
+            {/* <TabsTrigger value="financials" className="font-black text-xs gap-2 data-[state=active]:bg-primary data-[state=active]:text-black rounded-2xl transition-all">
               <History className="h-4 w-4" /> السجل التاريخي
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="operations" className="space-y-6 animate-in slide-in-from-right-4 duration-500 m-0">
