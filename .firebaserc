@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "studio-9145223887-757dc"
-  }
+    "default": "studio-9145223887-757dc",
+    "default ": "studio-9145223887-757dc",
+    "defult": "studio-9145223887-757dc"
+  },
+  "targets": {},
+  "etags": {}
 }

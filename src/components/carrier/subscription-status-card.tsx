@@ -348,8 +348,8 @@ export function SubscriptionStatusCard({ profile }: SubscriptionStatusCardProps)
               <Button
                 size="sm"
                 className={`w-full font-bold ${subscriptionState === 'expired'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-amber-500 hover:bg-amber-600 text-white'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-amber-500 hover:bg-amber-600 text-white'
                   }`}
                 onClick={() => setIsTopupOpen(true)}
               >

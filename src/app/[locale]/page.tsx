@@ -187,7 +187,7 @@ export default function LandingPage() {
     <main dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-[#321018] text-white font-body">
 
       {/* ── Navbar ── */}
-      <nav className="fixed h-16 rounded-b-lg top-0 pb-6 pt-9  left-0 right-0 z-50 flex items-center justify-between px-6  bg-[#321018]/80 backdrop-blur-md border-b border-[#BFAF78]/20"
+      <nav className="fixed h-16 rounded-b-lg top-0 pb-6 pt-9  left-0 right-0 z-50 flex items-center justify-between px-6  bg-[#BFAF78] backdrop-blur-md border-b border-[#BFAF78]/20"
         aria-label="Main navigation">
         <div className="h-16 flex items-center justify-center pt-5">
           {/* ✅ priority للـ logo عشان يتحمل أول حاجة */}
@@ -197,7 +197,7 @@ export default function LandingPage() {
         <div className="hidden sm:flex items-center gap-3">
           <LanguageSwitcher />
           <Button size="sm" variant="outline"
-            className="border-[#BFAF78] text-[#BFAF78] bg-transparent hover:bg-[#BFAF78]/10 font-bold gap-2"
+            className="border-black text-black bg-transparent hover:bg-[#BFAF78]/10 font-bold gap-2"
             onClick={() => router.push('/email-login?role=agent')}
             aria-label={isRTL ? 'دخول الوكيل' : 'Agent Login'}>
             <Shield className="w-4 h-4" aria-hidden="true" />
@@ -228,17 +228,17 @@ export default function LandingPage() {
           <p className="inline-block text-sm px-4 py-2 rounded-full mb-6 bg-[#BFAF78]/10 border border-[#BFAF78]/30 text-[#BFAF78]">
             {t('hero.badge')}
           </p>
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+          <h1 className="text-5xl md:text-5xl font-bold mb-6 leading-tight">
             {t('hero.title1')}
             <span className="text-[#BFAF78]">{t('hero.brand')}</span>
           </h1>
-          <p className="text-xl md:text-2xl mb-10 leading-relaxed text-rose-200/60">
+          <p className="text-xl md:text-2xl mb-10 leading-relaxed text-[#BFAF78]">
             {t('hero.subtitle')}
           </p>
           <div className="max-w-4xl mx-auto py-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Traveler Card */}
-              <div className="rounded-2xl bg-[#2d0a0a] border border-[#3d1515] hover:border-[#BFAF78] transition-colors p-8 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="rounded-2xl bg-[#2d0a0a] border border-[#BFAF78] hover:border-[#BFAF78]/60 transition-colors p-8 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-[#BFAF78]/10 border border-[#BFAF78]/40 flex items-center justify-center" aria-hidden="true">
                     <Users className="w-6 h-6 text-[#BFAF78]" />
@@ -246,7 +246,9 @@ export default function LandingPage() {
                   <h2 className="text-xl font-bold text-white">{t('hero.traveler')}</h2>
                 </div>
                 <p className="text-rose-200/60 text-md leading-relaxed">{t('hero.travelerDec')}</p>
-                <Button size="lg" className="w-full bg-[#BFAF78] text-[#1a0505] font-bold hover:bg-[#d4c98a] rounded-xl gap-2"
+                <Button size="lg"
+                  variant="outline"
+                  className="w-full border-[#BFAF78] text-[#BFAF78] bg-transparent hover:bg-[#BFAF78]/10 rounded-xl gap-2"
                   onClick={() => router.push(`/${locale}/dashboard`)}>
                   {t('hero.booking')} <ArrowIcon className="w-4 h-4" aria-hidden="true" />
                 </Button>

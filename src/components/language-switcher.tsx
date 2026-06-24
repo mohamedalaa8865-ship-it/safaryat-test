@@ -23,7 +23,7 @@ export function LanguageSwitcher({ fullWidth = false }: { fullWidth?: boolean })
         // variant="outline"
         size="sm"
         // className=`gap-2 ${fullWidth ? 'w-full' : ''} `
-        className={`gap-2  ${fullWidth ? 'w-full' : ''}`}
+        className={`gap-2  border border-black ${fullWidth ? 'w-full' : ''}`}
       >
 
         <Languages className="h-4 w-4" />

@@ -30,10 +30,31 @@ export function AskAiTrigger() {
   const { profile, securityLevel } = useUserProfile();
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState('');
-  const [chatHistory, setChatHistory] = useState<{role: 'user' | 'ai', text: string}[]>([]);
+  const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'ai', text: string }[]>([]);
 
   const { isStreaming, executePrompt } = useSovereignAI(askAi);
 
+  // const handleAsk = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   if (!question.trim() || isStreaming) return;
+
+  //   const currentQuestion = question;
+  //   setQuestion('');
+  //   setChatHistory(prev => [...prev, { role: 'user', text: currentQuestion }]);
+
+  //   try {
+  //     const answer = await executePrompt({
+  //       question: currentQuestion,
+  //       context: {
+  //         path: pathname,
+  //         role: profile?.role || 'visitor'
+  //       }
+  //     });
+  //     setChatHistory(prev => [...prev, { role: 'ai', text: answer }]);
+  //   } catch (err) {
+  //     setChatHistory(prev => [...prev, { role: 'ai', text: 'عذراً، تعذر الاتصال بالنواة الذكية حالياً.' }]);
+  //   }
+  // };
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim() || isStreaming) return;
@@ -43,19 +64,24 @@ export function AskAiTrigger() {
     setChatHistory(prev => [...prev, { role: 'user', text: currentQuestion }]);
 
     try {
-      const answer = await executePrompt({
+      // 1. استدعاء الـ prompt والحصول على الكائن المسترجع
+      const result = await executePrompt({
         question: currentQuestion,
         context: {
           path: pathname,
           role: profile?.role || 'visitor'
         }
       });
-      setChatHistory(prev => [...prev, { role: 'ai', text: answer }]);
+
+      // 2. قراءة الحقل answerText المتوافق مع AskAiOutputSchema
+      const aiResponseText = result?.answerText || 'لم أتمكن من معالجة الرد.';
+
+      setChatHistory(prev => [...prev, { role: 'ai', text: aiResponseText }]);
     } catch (err) {
+      console.error("AI Error:", err);
       setChatHistory(prev => [...prev, { role: 'ai', text: 'عذراً، تعذر الاتصال بالنواة الذكية حالياً.' }]);
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -67,7 +93,7 @@ export function AskAiTrigger() {
           <span className="sr-only">اسأل المساعد السيادي</span>
         </Button>
       </DialogTrigger>
-      
+
       <DialogContent className="sm:max-w-[450px] h-[600px] flex flex-col p-0 overflow-hidden border-2 border-primary/20 bg-card/95 backdrop-blur-xl rounded-[2.5rem] shadow-[0_0_50px_rgba(190,174,119,0.2)]" dir="rtl">
         <DialogHeader className="p-6 bg-primary/10 border-b border-primary/10 flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-3">
@@ -92,7 +118,7 @@ export function AskAiTrigger() {
                 <p className="text-sm font-bold">أهلاً بك أيها القائد. كيف يمكنني دعم عملياتك السيادية اليوم؟</p>
               </div>
             )}
-            
+
             {chatHistory.map((msg, i) => (
               <div key={i} className={cn(
                 "flex flex-col max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300",
@@ -106,15 +132,15 @@ export function AskAiTrigger() {
                 </div>
                 <div className={cn(
                   "px-4 py-3 rounded-2xl text-xs font-medium leading-relaxed shadow-sm",
-                  msg.role === 'user' 
-                    ? "bg-muted/50 text-foreground rounded-tr-none border border-white/5" 
+                  msg.role === 'user'
+                    ? "bg-muted/50 text-foreground rounded-tr-none border border-white/5"
                     : "bg-primary text-black font-bold rounded-tl-none"
                 )}>
                   {msg.text}
                 </div>
               </div>
             ))}
-            
+
             {isStreaming && (
               <div className="flex items-center gap-2 text-primary animate-pulse ml-auto">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -133,9 +159,9 @@ export function AskAiTrigger() {
               disabled={isStreaming}
               className="h-14 pr-4 pl-14 rounded-2xl bg-muted/20 border-primary/10 font-bold focus-visible:ring-primary/30"
             />
-            <Button 
-              type="submit" 
-              size="icon" 
+            <Button
+              type="submit"
+              size="icon"
               disabled={!question.trim() || isStreaming}
               className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-xl shadow-lg active:scale-90 transition-all"
             >

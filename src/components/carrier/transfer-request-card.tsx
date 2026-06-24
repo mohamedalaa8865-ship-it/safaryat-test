@@ -32,17 +32,17 @@ function FromCarrierInfo({ carrierId }: { carrierId: string }) {
             </div>
         );
     }
-    
+
     if (!carrier) return <p>ناقل غير معروف</p>;
 
     return (
         <div className="flex items-center gap-3">
-             <Avatar className="h-8 w-8">
+            <Avatar className="h-8 w-8">
                 <AvatarFallback>{carrier.firstName?.charAt(0) || 'C'}</AvatarFallback>
             </Avatar>
             <div>
-                 <p className="text-sm font-bold">{carrier.firstName} {carrier.lastName}</p>
-                 <p className="text-xs text-muted-foreground">زميل ناقل</p>
+                <p className="text-sm font-bold">{carrier.firstName} {carrier.lastName}</p>
+                <p className="text-xs text-muted-foreground">زميل ناقل</p>
             </div>
         </div>
     );
@@ -75,7 +75,7 @@ export function TransferRequestCard({ request, onAccept, onReject }: TransferReq
     }
 
     return (
-        <Card className="w-full shadow-lg border-2 border-orange-400 bg-orange-500/5">
+        <Card className="w-full shadow-lg border-2 border-orange-400 bg-orange-500/5 overflow-hidden">
             <CardHeader>
                 <CardTitle className="text-base">
                     <FromCarrierInfo carrierId={request.fromCarrierId} />
@@ -103,11 +103,11 @@ export function TransferRequestCard({ request, onAccept, onReject }: TransferReq
             </CardContent>
             <CardFooter className="flex gap-2 bg-card p-2">
                 <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={handleAccept} disabled={isProcessing}>
-                    {isProcessing ? <Loader2 className="ml-2 h-4 w-4 animate-spin"/> : <Check className="ml-2 h-4 w-4" />}
+                    {isProcessing ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Check className="ml-2 h-4 w-4" />}
                     قبول استلام الرحلة
                 </Button>
                 <Button variant="destructive" className="w-full" onClick={handleReject} disabled={isProcessing}>
-                    {isProcessing ? <Loader2 className="ml-2 h-4 w-4 animate-spin"/> : <X className="ml-2 h-4 w-4" />}
+                    {isProcessing ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <X className="ml-2 h-4 w-4" />}
                     رفض الطلب
                 </Button>
             </CardFooter>
