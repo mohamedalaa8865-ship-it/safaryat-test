@@ -206,7 +206,7 @@ export default function LandingPage() {
         </div>
         <button className="sm:hidden text-[#BFAF78]" onClick={() => setMenuOpen(p => !p)}
           aria-label="Toggle menu" aria-expanded={menuOpen}>
-          <MenuIcon aria-hidden="true" />
+          <MenuIcon aria-hidden="true" className="text-black" />
         </button>
         {menuOpen && (
           <div className="sm:hidden absolute top-full left-0 right-0 bg-[#321018] border-b px-6 py-4 flex flex-col gap-3" role="menu">

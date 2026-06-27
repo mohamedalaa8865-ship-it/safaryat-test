@@ -24,7 +24,7 @@ export default function AgentCockpit() {
   const { counts } = useAgentArchive();
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-700 p-4 pb-32" dir="rtl">
+    <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-700 p-4 pb-32" dir="rtl">
 
       <header className="flex justify-between items-center px-2">
         <div className="flex items-center gap-3">
@@ -35,10 +35,9 @@ export default function AgentCockpit() {
           </Link>
           <div>
             <h1 className="font-black text-xl tracking-tighter text-foreground">قمرة القيادة السيادية</h1>
-            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Sovereign Profile & Records</p>
           </div>
         </div>
-        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-black text-[9px] gap-1 px-3 py-1 rounded-full shadow-inner">
+        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 font-black text-sm gap-1 px-3 py-1 rounded-full shadow-inner">
           < ShieldCheck className="h-3 w-3" /> إدارة الحساب
         </Badge>
       </header>
@@ -65,17 +64,10 @@ export default function AgentCockpit() {
           <SecurityVault />
         </LocalErrorBoundary>
 
-        <LocalErrorBoundary fallbackTitle="تعثر الأرشيف الميداني">
+        {/* <LocalErrorBoundary fallbackTitle="تعثر الأرشيف الميداني">
           <FieldArchive />
-        </LocalErrorBoundary>
+        </LocalErrorBoundary> */}
       </div>
-
-      <div className="p-4 bg-primary/5 rounded-3xl border border-dashed border-primary/20 text-center">
-        <p className="text-[9px] font-bold text-muted-foreground leading-relaxed">
-          <strong>ميثاق القمة [SCR-987]:</strong> قمرة القيادة مرتبطة بوحدة الحقيقة التاريخية. تمَّ إعدام كافة الأشباح البرمجية لضمان نزاهة العدادات الميدانية.
-        </p>
-      </div>
-
     </div>
   );
 }

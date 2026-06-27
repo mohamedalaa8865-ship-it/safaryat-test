@@ -119,6 +119,7 @@ import { Cloud, Settings, MessageSquare, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFirestore, useUser, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { useTranslations } from 'next-intl';
 
 // عدد الرسائل الغير مقروءة في شات الوكيل مع الأدمن
 function useAgentUnreadCount() {
@@ -145,7 +146,7 @@ function useAgentUnreadCount() {
 export function AgentBottomNav() {
     const pathname = usePathname();
     const unreadCount = useAgentUnreadCount();
-
+    const t = useTranslations('AgentBottomNav')
     // دالة صح للـ active state بدون تعارض
     const isActive = (href: string) => {
         // استخرج الجزء بعد الـ locale
@@ -160,10 +161,10 @@ export function AgentBottomNav() {
     };
 
     const navItems = [
-        { href: '/agent', label: 'لوحة التحكم', icon: Cloud },
-        { href: '/agent/bookings', label: 'الحجوزات', icon: ClipboardList },
-        { href: '/agent/cockpit', label: 'الإعدادات', icon: Settings },
-        { href: '/agent/chat', label: 'الرسائل', icon: MessageSquare, badge: unreadCount },
+        { href: '/agent', label: t('controlPanal'), icon: Cloud },
+        { href: '/agent/bookings', label: t('reservation'), icon: ClipboardList },
+        { href: '/agent/cockpit', label: t('accountMang'), icon: Settings },
+        { href: '/agent/chat', label: t('message'), icon: MessageSquare, badge: unreadCount },
     ];
 
     return (

@@ -14,6 +14,7 @@ import { Eye, EyeOff, Loader2, Mail, Lock, ArrowRight, ArrowLeft, ShieldCheck, U
 import { useToast } from '@/hooks/use-toast';
 import { SignJWT } from 'jose';
 import { useSearchParams } from 'next/navigation';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 /**
  * @page EmailLoginPage
@@ -182,6 +183,7 @@ export default function EmailLoginPage() {
                 {/* Header */}
                 <div className="flex flex-col items-center text-center gap-3">
                     <Logo />
+                    <LanguageSwitcher />
                     <div>
                         <h1 className="text-2xl font-bold">
                             {isRTL ? 'بوابتك للسفر البري' : 'Your gateway to overland travel'}

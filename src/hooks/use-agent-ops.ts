@@ -6,6 +6,7 @@
 //  * Protocol 20: No silent failures. All ruptures flow to the Black Box.
 //  */
 // import { useState, useCallback } from "react";
+// import { sendPush } from "@/lib/send-push";
 // import { useFirestore } from "@/firebase";
 // import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc } from "firebase/firestore";
 // import { getErrorMessage } from "@/lib/error-dictionary";
@@ -91,6 +92,12 @@
 //               isRead: false,
 //               link: `/${locale}/carrier/bookings`,
 //               createdAt: serverTimestamp(),
+//             });
+//             await sendPush({
+//               userId: trip.carrierId,
+//               title: "طلب حجز من وكيل 🤝",
+//               body: `الوكيل "${agentName}" يطلب حجز ${seats} مقعد`,
+//               data: { type: "agent_booking_request", bookingId: bookingRef.id },
 //             });
 //           }
 
@@ -180,7 +187,7 @@ export function useAgentOps(agentId: string) {
   const [magicLink, setMagicLink] = useState("");
 
   const submitProxyBooking = useCallback(
-    async (tripData: any, onSuccess?: () => void) => {
+    async (tripData: any, onSuccess?: (bookingId: string) => void) => {
       if (!firestore || !agentId) {
         toast({ variant: "destructive", title: "فشل الهوية", description: "المعرف الرقمي للوكيل غير صالح." });
         return;
@@ -190,7 +197,7 @@ export function useAgentOps(agentId: string) {
       setMagicLink("");
 
       try {
-        let generatedLink = "";
+        let createdId = "";
 
         // نجيب اسم الوكيل مرة واحدة
         const agentSnap = await getDoc(doc(firestore, "users", agentId));
@@ -239,6 +246,8 @@ export function useAgentOps(agentId: string) {
           });
           console.log("✅ [AgentOps] Booking created (awaiting carrier approval):", bookingRef.id);
 
+          createdId = bookingRef.id;
+
           // إشعار للناقل بطلب الوكيل + العمولة
           if (trip.carrierId) {
             await addDoc(collection(doc(firestore, "users", trip.carrierId), "notifications"), {
@@ -263,12 +272,6 @@ export function useAgentOps(agentId: string) {
             activeIntentId: bookingRef.id,
             updatedAt: serverTimestamp(),
           });
-
-          // [SCR-ABF]: اللينك بيكون للـ booking مش للـ trip
-          // عشان المسافر يشوف حالة حجزه بالظبط
-          const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-          generatedLink = `${baseUrl}/${locale}/ticket/${bookingRef.id}`;
-          setMagicLink(generatedLink);
         } else {
           // المسار 2: ينشر الطلب في السوق كـ Awaiting-Offers
           const tripsRef = collection(firestore, "trips");
@@ -289,18 +292,17 @@ export function useAgentOps(agentId: string) {
           });
           const docRef = await addDoc(tripsRef, payload);
 
+          createdId = docRef.id;
+
           await updateDoc(doc(firestore, "users", agentId), {
             activeIntentId: docRef.id,
             updatedAt: serverTimestamp(),
           });
-
-          const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-          generatedLink = `${baseUrl}/${locale}/ticket/${docRef.id}`;
-          setMagicLink(generatedLink);
         }
 
         toast({ title: "تم الحجز بنجاح ✅" });
-        if (onSuccess) onSuccess();
+        if (onSuccess) onSuccess(createdId);
+        return createdId;
       } catch (error: any) {
         console.error("🔴 REAL ERROR:", error.code, error.message, JSON.stringify(error));
         SovereignBlackBox.reportLethalCrash(error, "AGENT_PROXY_BOOKING_FAILURE", { agentId, tripData });
