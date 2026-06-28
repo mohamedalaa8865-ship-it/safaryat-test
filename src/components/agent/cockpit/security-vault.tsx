@@ -134,7 +134,7 @@ export function SecurityVault() {
     };
 
     return (
-        <Card className="border-primary/10 shadow-2xl rounded-[2.5rem] bg-card overflow-hidden">
+        <Card className="border-[#BEAD77] shadow-2xl rounded-[2.5rem] bg-card overflow-hidden">
             <CardHeader className="bg-primary/5 border-b border-primary/10 pb-4">
                 <CardTitle className="text-sm font-black text-primary flex items-center gap-2">
                     <Shield className="h-5 w-5 text-primary" /> الهوية والتحصين السيادي
@@ -142,22 +142,22 @@ export function SecurityVault() {
             </CardHeader>
             <CardContent className="p-6 space-y-6">
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-muted/10 rounded-2xl border border-primary/5">
+                    <div className="flex items-center justify-between p-4 bg-muted/10 rounded-2xl border border-[#BEAD77]">
                         <div className="flex items-center gap-3">
                             <div className="bg-primary/10 p-2 rounded-lg"><Mail className="h-4 w-4 text-primary" /></div>
                             <div className="text-right">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">البريد المعتمد</p>
-                                <p className="text-xs font-bold font-mono text-foreground">{user?.email || 'N/A'}</p>
+                                <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">البريد المعتمد</p>
+                                <p className="text-sm font-bold font-mono text-foreground">{user?.email || 'N/A'}</p>
                             </div>
                         </div>
                         <CheckCircle2 className="h-4 w-4 text-emerald-500 opacity-50" />
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-muted/10 rounded-2xl border border-primary/5">
+                    <div className="flex items-center justify-between p-4 bg-muted/10 rounded-2xl border border-[#BEAD77]">
                         <div className="flex items-center gap-3 flex-1">
                             <div className="bg-primary/10 p-2 rounded-lg"><Phone className="h-4 w-4 text-primary" /></div>
                             <div className="text-right flex-1">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">رقم الاتصال الميداني</p>
+                                <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">رقم الاتصال الميداني</p>
                                 {isEditingPhone ? (
                                     <div className="flex items-center gap-2 mt-1">
                                         <Input
@@ -165,7 +165,7 @@ export function SecurityVault() {
                                             onChange={e => setPhoneValue(e.target.value)}
                                             placeholder="+9627XXXXXXXX"
                                             dir="ltr"
-                                            className="h-8 text-xs font-mono bg-background border-primary/20 rounded-lg"
+                                            className="h-8 text-sm font-mono bg-background border-primary/20 rounded-lg"
                                             autoFocus
                                         />
                                         <button onClick={handleSavePhone} disabled={isSavingPhone} className="text-emerald-500 hover:text-emerald-400">
@@ -190,13 +190,13 @@ export function SecurityVault() {
                     </div>
                 </div>
 
-                <Button
+                {/* <Button
                     onClick={handlePasswordReset}
                     disabled={isResetting || !user?.email}
                     className="w-full h-14 rounded-2xl bg-background border-2 border-primary/20 text-primary hover:bg-primary/10 font-black gap-2 transition-all shadow-lg active:scale-95"
                 >
                     {isResetting ? <Loader2 className="h-5 w-5 animate-spin" /> : <><KeyRound className="h-5 w-5" /> طلب إعادة تعيين كلمة المرور</>}
-                </Button>
+                </Button> */}
             </CardContent>
         </Card>
     );

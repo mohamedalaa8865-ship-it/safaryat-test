@@ -35,47 +35,49 @@ export function JobOfferCard({
                     </span>
                 </div>
             )}
-            <div className="absolute top-0 right-0 w-1.5 h-full bg-amber-500/60" />
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500/60" />
             <CardContent className="pt-6 pb-5 space-y-4 text-right">
                 <div className="flex justify-between items-start">
-                    <div className="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                        <Briefcase className="h-5 w-5 text-amber-600" />
-                    </div>
+
                     <div>
-                        <p className="text-[9px] font-black text-amber-600/70 uppercase tracking-widest">عرض الشغل الحالي</p>
                         <h3 className="font-black text-base text-foreground">
                             {jobTitle || 'وكيل سيادي'}
                         </h3>
+                        <p className="text-xs font-black text-amber-600/70 uppercase tracking-widest">عرض الشغل الحالي</p>
+
+                    </div>
+                    <div className="p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                        <Briefcase className="h-5 w-5 text-amber-600" />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
                     <div className={cn(
                         "flex flex-col items-center justify-center p-3 rounded-2xl border text-center gap-1",
-                        "bg-background border-amber-500/10"
+                        "bg-background border-[#BEAD77]"
                     )}>
-                        <Target className="h-4 w-4 text-primary" />
-                        <span className="text-[9px] text-muted-foreground font-bold">هدف الحجوزات</span>
+                        <Target className="h-5 w-5 text-primary" />
+                        <span className="text-sm text-muted-foreground font-bold">هدف الحجوزات</span>
                         <span className="font-black text-sm text-foreground font-mono">{agentTarget}</span>
-                        <span className="text-[8px] text-muted-foreground">راكب</span>
+                        <span className="text-xs text-muted-foreground">راكب</span>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl border bg-background border-amber-500/10 text-center gap-1">
-                        <Award className="h-4 w-4 text-amber-500" />
-                        <span className="text-[9px] text-muted-foreground font-bold">مكافأة الهدف</span>
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl border border-[#BEAD77] bg-background  text-center gap-1">
+                        <Award className="h-5 w-5 text-amber-500" />
+                        <span className="text-sm text-muted-foreground font-bold">مكافأة الهدف</span>
                         <span className="font-black text-sm text-amber-600 font-mono">{agentBonus}</span>
-                        <span className="text-[8px] text-muted-foreground">{currency}</span>
+                        <span className="text-xs text-muted-foreground">{currency}</span>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl border bg-background border-amber-500/10 text-center gap-1">
-                        <Banknote className="h-4 w-4 text-emerald-500" />
-                        <span className="text-[9px] text-muted-foreground font-bold">الراتب الشهري</span>
+                    <div className="flex flex-col items-center justify-center p-3 rounded-2xl  bg-background border border-[#BEAD77] text-center gap-1">
+                        <Banknote className="h-5 w-5 text-emerald-500" />
+                        <span className="text-sm text-muted-foreground font-bold">الراتب الشهري</span>
                         <span className="font-black text-sm text-emerald-600 font-mono">{baseSalary}</span>
-                        <span className="text-[8px] text-muted-foreground">{currency}</span>
+                        <span className="text-xs text-muted-foreground">{currency}</span>
                     </div>
                 </div>
 
-                <p className="text-[8px] text-muted-foreground/60 font-bold text-center pt-1 border-t border-amber-500/10">
+                <p className="text-xs text-muted-foreground/60 font-bold text-center pt-1 border-t border-[#BEAD77]">
                     يتم تحديث بيانات العمل تلقائياً فور أي تعديل من الإدارة.
                 </p>
             </CardContent>
