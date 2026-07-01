@@ -593,7 +593,7 @@ export function AskAiTrigger() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className="fixed bottom-24 left-6 z-[100] h-14 w-14 rounded-full shadow-2xl bg-primary text-black hover:bg-primary/90 animate-in fade-in slide-in-from-bottom-10 duration-1000 group active:scale-90 transition-all border-4 border-background"
+          className="fixed bottom-10 left-6 z-[100] h-14 w-14 rounded-full shadow-2xl bg-primary text-black hover:bg-primary/90 animate-in fade-in slide-in-from-bottom-10 duration-1000 group active:scale-90 transition-all border-4 border-background"
           size="icon"
         >
           <Sparkles className="h-6 w-6 group-hover:rotate-12 transition-transform" />

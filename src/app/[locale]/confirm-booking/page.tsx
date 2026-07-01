@@ -1,1297 +1,9 @@
-// // // // // // // // 'use client';
-
-// // // // // // // // import { useEffect, useState } from 'react';
-// // // // // // // // import { useSearchParams, useRouter } from 'next/navigation';
-// // // // // // // // import { useFirestore, useUser } from '@/firebase';
-// // // // // // // // import { doc, getDoc, collection, serverTimestamp, writeBatch, arrayUnion, increment, setDoc } from 'firebase/firestore';
-// // // // // // // // import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-// // // // // // // // import { Button } from '@/components/ui/button';
-// // // // // // // // import { BookingDialog } from '@/components/booking-dialog';
-// // // // // // // // import type { Trip, PassengerDetails } from '@/lib/data';
-// // // // // // // // import { useLocale, useTranslations } from 'next-intl';
-
-// // // // // // // // /**
-// // // // // // // //  * @file src/app/[locale]/confirm-booking/page.tsx
-// // // // // // // //  * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V6.0)
-// // // // // // // //  * [FIX]: لو الـ token فيه bookingId (جاي من وكيل) → يحدّث الـ booking الموجود
-// // // // // // // //  *        بدل ما يعمل booking جديد — عشان بيانات المسافر تظهر عند الناقل
-// // // // // // // //  */
-
-// // // // // // // // type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
-
-// // // // // // // // export default function ConfirmBookingPage() {
-// // // // // // // //   const searchParams = useSearchParams();
-// // // // // // // //   const router = useRouter();
-// // // // // // // //   const firestore = useFirestore();
-// // // // // // // //   const { user } = useUser();
-// // // // // // // //   const locale = useLocale();
-// // // // // // // //   const tError = useTranslations('errorDictionary');
-// // // // // // // //   const t = useTranslations('ConfirmBooking');
-// // // // // // // //   const token = searchParams.get('token');
-
-// // // // // // // //   const [status, setStatus] = useState<Status>('loading');
-// // // // // // // //   const [tokenData, setTokenData] = useState<any>(null);
-// // // // // // // //   const [trip, setTrip] = useState<Trip | null>(null);
-// // // // // // // //   const [isDialogOpen, setIsDialogOpen] = useState(false);
-// // // // // // // //   const [errorCode, setErrorCode] = useState('DEFAULT');
-
-// // // // // // // //   useEffect(() => {
-// // // // // // // //     if (!token || !firestore) return;
-
-// // // // // // // //     const verifyToken = async () => {
-// // // // // // // //       try {
-// // // // // // // //         const tokenRef = doc(firestore, 'booking_tokens', token);
-// // // // // // // //         const tokenSnap = await getDoc(tokenRef);
-
-// // // // // // // //         if (!tokenSnap.exists()) {
-// // // // // // // //           setStatus('error');
-// // // // // // // //           setErrorCode('TOKEN_INVALID');
-// // // // // // // //           return;
-// // // // // // // //         }
-
-// // // // // // // //         const data = tokenSnap.data();
-
-// // // // // // // //         if (data.status === 'used') {
-// // // // // // // //           setStatus('error');
-// // // // // // // //           setErrorCode('TOKEN_USED');
-// // // // // // // //           return;
-// // // // // // // //         }
-
-// // // // // // // //         const expiresAt = data.expiresAt?.toDate?.() || new Date(data.expiresAt);
-// // // // // // // //         if (new Date() > expiresAt) {
-// // // // // // // //           setStatus('error');
-// // // // // // // //           setErrorCode('TOKEN_EXPIRED');
-// // // // // // // //           return;
-// // // // // // // //         }
-
-// // // // // // // //         const tripRef = doc(firestore, 'trips', data.tripId);
-// // // // // // // //         const tripSnap = await getDoc(tripRef);
-
-// // // // // // // //         if (!tripSnap.exists()) {
-// // // // // // // //           setStatus('error');
-// // // // // // // //           setErrorCode('TRIP_NOT_FOUND');
-// // // // // // // //           return;
-// // // // // // // //         }
-
-// // // // // // // //         setTokenData(data);
-// // // // // // // //         setTrip({ id: tripSnap.id, ...tripSnap.data() } as Trip);
-// // // // // // // //         setStatus('ready');
-// // // // // // // //         setIsDialogOpen(true);
-// // // // // // // //       } catch (err) {
-// // // // // // // //         console.error('[VerifyToken Error]', err);
-// // // // // // // //         setStatus('error');
-// // // // // // // //         setErrorCode('VERIFICATION_FAILED');
-// // // // // // // //       }
-// // // // // // // //     };
-
-// // // // // // // //     verifyToken();
-// // // // // // // //   }, [token, firestore]);
-
-// // // // // // // //   const handleConfirmBooking = async (passengers: PassengerDetails[]) => {
-// // // // // // // //     if (!firestore || !tokenData || !trip || !token) throw new Error('MISSING_DATA');
-// // // // // // // //     if (!user?.uid) throw new Error('AUTH_REQUIRED');
-
-// // // // // // // //     setStatus('confirming');
-
-// // // // // // // //     try {
-// // // // // // // //       const batch = writeBatch(firestore);
-// // // // // // // //       const tokenRef = doc(firestore, 'booking_tokens', token);
-
-// // // // // // // //       // ══════════════════════════════════════════════════════════════════
-// // // // // // // //       // [FIX - SC-806 V6.0]: المسار الجاي من وكيل
-// // // // // // // //       // لو في bookingId في الـ token → الـ booking موجود (عمله الوكيل)
-// // // // // // // //       // المسافر بس يكمّل البيانات ويدفع الغربون
-// // // // // // // //       // ══════════════════════════════════════════════════════════════════
-// // // // // // // //       if (tokenData.bookingId) {
-// // // // // // // //         const existingBookingRef = doc(firestore, 'bookings', tokenData.bookingId);
-
-// // // // // // // //         // تحديث الـ booking الموجود ببيانات المسافر
-// // // // // // // //         batch.update(existingBookingRef, {
-// // // // // // // //           userId: user.uid,
-// // // // // // // //           passengersDetails: passengers,
-// // // // // // // //           seats: passengers.length,
-// // // // // // // //           depositPaid: true,
-// // // // // // // //           verifiedEmail: tokenData.email || null,
-// // // // // // // //           status: 'Pending-Carrier-Confirmation', // يفضل نفسه — الناقل هيشوفه
-// // // // // // // //           updatedAt: serverTimestamp(),
-// // // // // // // //         });
-
-// // // // // // // //         // تعليم التوكن كمستخدم
-// // // // // // // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
-
-// // // // // // // //         // تقليل المقاعد من رحلة الناقل
-// // // // // // // //         if (tokenData.carrierTripId) {
-// // // // // // // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// // // // // // // //           batch.update(carrierTripRef, {
-// // // // // // // //             availableSeats: increment(-passengers.length),
-// // // // // // // //             bookingIds: arrayUnion(tokenData.bookingId),
-// // // // // // // //             updatedAt: serverTimestamp(),
-// // // // // // // //           });
-// // // // // // // //         }
-
-// // // // // // // //         // ربط المسافر بالحجز في بروفايله
-// // // // // // // //         const userRef = doc(firestore, 'users', user.uid);
-// // // // // // // //         batch.update(userRef, {
-// // // // // // // //           activeBookingId: tokenData.bookingId,
-// // // // // // // //           activeIntentId: null,
-// // // // // // // //           updatedAt: serverTimestamp(),
-// // // // // // // //         });
-
-// // // // // // // //         // إشعار للناقل إن المسافر دفع وأكمل البيانات
-// // // // // // // //         if (trip.carrierId) {
-// // // // // // // //           const notifRef = doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'));
-// // // // // // // //           batch.set(notifRef, {
-// // // // // // // //             userId: trip.carrierId,
-// // // // // // // //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// // // // // // // //             message: `المسافر "${passengers[0]?.name || ''}" أكمل بياناته ودفع الغربون — ${passengers.length} مقعد`,
-// // // // // // // //             type: 'passenger_deposit_paid',
-// // // // // // // //             bookingId: tokenData.bookingId,
-// // // // // // // //             isRead: false,
-// // // // // // // //             link: `/${locale}/carrier/bookings`,
-// // // // // // // //             createdAt: serverTimestamp(),
-// // // // // // // //           });
-// // // // // // // //         }
-
-// // // // // // // //         await batch.commit();
-
-// // // // // // // //         // محاولة الانضمام للـ group chat
-// // // // // // // //         try {
-// // // // // // // //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// // // // // // // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// // // // // // // //         } catch (e) {
-// // // // // // // //           console.warn('[GroupChat] Could not join:', e);
-// // // // // // // //         }
-
-// // // // // // // //       } else {
-// // // // // // // //         // ══════════════════════════════════════════════════════════════════
-// // // // // // // //         // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
-// // // // // // // //         // ══════════════════════════════════════════════════════════════════
-// // // // // // // //         const bookingRef = doc(collection(firestore, 'bookings'));
-// // // // // // // //         const notificationRef = trip.carrierId
-// // // // // // // //           ? doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'))
-// // // // // // // //           : null;
-
-// // // // // // // //         batch.set(bookingRef, {
-// // // // // // // //           id: bookingRef.id,
-// // // // // // // //           tripId: trip.id,
-// // // // // // // //           carrierTripId: tokenData.carrierTripId || null,
-// // // // // // // //           userId: user.uid,
-// // // // // // // //           carrierId: trip.carrierId || tokenData.carrierId,
-// // // // // // // //           seats: passengers.length,
-// // // // // // // //           passengersDetails: passengers,
-// // // // // // // //           status: 'Pending-Carrier-Confirmation',
-// // // // // // // //           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
-// // // // // // // //           currency: tokenData.currency || trip.currency || 'JOD',
-// // // // // // // //           verifiedEmail: tokenData.email || null,
-// // // // // // // //           bookedByAgent: false,
-// // // // // // // //           createdAt: serverTimestamp(),
-// // // // // // // //           updatedAt: serverTimestamp(),
-// // // // // // // //         });
-
-// // // // // // // //         // تعليم التوكن كمستخدم
-// // // // // // // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
-
-// // // // // // // //         // تقليل المقاعد
-// // // // // // // //         if (tokenData.carrierTripId) {
-// // // // // // // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// // // // // // // //           batch.update(carrierTripRef, {
-// // // // // // // //             availableSeats: increment(-passengers.length),
-// // // // // // // //             bookingIds: arrayUnion(bookingRef.id),
-// // // // // // // //             updatedAt: serverTimestamp(),
-// // // // // // // //           });
-// // // // // // // //         }
-
-// // // // // // // //         // ربط المسافر بالحجز
-// // // // // // // //         const userRef = doc(firestore, 'users', user.uid);
-// // // // // // // //         batch.update(userRef, {
-// // // // // // // //           activeBookingId: bookingRef.id,
-// // // // // // // //           activeIntentId: null,
-// // // // // // // //           updatedAt: serverTimestamp(),
-// // // // // // // //         });
-
-// // // // // // // //         // إشعار للناقل
-// // // // // // // //         if (trip.carrierId && notificationRef) {
-// // // // // // // //           batch.set(notificationRef, {
-// // // // // // // //             userId: trip.carrierId,
-// // // // // // // //             title: 'طلب حجز جديد 🎫',
-// // // // // // // //             message: `مسافر يطلب حجز ${passengers.length} مقعد من ${trip.origin} إلى ${trip.destination}`,
-// // // // // // // //             type: 'new_booking_request',
-// // // // // // // //             isRead: false,
-// // // // // // // //             link: `/${locale}/carrier/bookings`,
-// // // // // // // //             createdAt: serverTimestamp(),
-// // // // // // // //           });
-// // // // // // // //         }
-
-// // // // // // // //         await batch.commit();
-
-// // // // // // // //         // محاولة الانضمام للـ group chat
-// // // // // // // //         try {
-// // // // // // // //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// // // // // // // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// // // // // // // //         } catch (e) {
-// // // // // // // //           console.warn('[GroupChat] Could not join:', e);
-// // // // // // // //         }
-// // // // // // // //       }
-
-// // // // // // // //       setIsDialogOpen(false);
-// // // // // // // //       setStatus('success');
-
-// // // // // // // //     } catch (err) {
-// // // // // // // //       console.error('[ConfirmBooking Error]', err);
-// // // // // // // //       setStatus('error');
-// // // // // // // //       setErrorCode('OPERATION_FAILED');
-// // // // // // // //       throw err;
-// // // // // // // //     }
-// // // // // // // //   };
-
-// // // // // // // //   return (
-// // // // // // // //     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background" dir="rtl">
-
-// // // // // // // //       {status === 'loading' && (
-// // // // // // // //         <div className="text-center space-y-4">
-// // // // // // // //           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-// // // // // // // //           <p className="text-muted-foreground">جاري فحص الختم الرقمي...</p>
-// // // // // // // //         </div>
-// // // // // // // //       )}
-
-// // // // // // // //       {(status === 'ready' || status === 'confirming') && trip && (
-// // // // // // // //         <div className="text-center space-y-4">
-// // // // // // // //           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-// // // // // // // //           <p className="text-muted-foreground">جاري استرجاع بيانات الرحلة...</p>
-// // // // // // // //         </div>
-// // // // // // // //       )}
-
-// // // // // // // //       {status === 'success' && (
-// // // // // // // //         <div className="text-center space-y-6 max-w-md animate-in zoom-in duration-500">
-// // // // // // // //           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto" />
-// // // // // // // //           <h1 className="text-2xl font-bold text-white">{t('accptReq')} 🎉</h1>
-// // // // // // // //           <Button className="w-full" onClick={() => router.push(`/${locale}/history`)}>
-// // // // // // // //             {t('gotoReq')}
-// // // // // // // //           </Button>
-// // // // // // // //         </div>
-// // // // // // // //       )}
-
-// // // // // // // //       {status === 'error' && (
-// // // // // // // //         <div className="text-center space-y-6 max-w-md animate-in shake duration-500">
-// // // // // // // //           <XCircle className="h-20 w-20 text-red-500 mx-auto" />
-// // // // // // // //           <h1 className="text-2xl font-bold">تنبيه سيادي</h1>
-// // // // // // // //           <p className="text-muted-foreground">{tError(errorCode)}</p>
-// // // // // // // //           <Button className="w-full" onClick={() => router.push(`/${locale}/dashboard`)}>
-// // // // // // // //             العودة للرئيسية
-// // // // // // // //           </Button>
-// // // // // // // //         </div>
-// // // // // // // //       )}
-
-// // // // // // // //       {trip && isDialogOpen && (
-// // // // // // // //         <BookingDialog
-// // // // // // // //           isOpen={isDialogOpen}
-// // // // // // // //           onOpenChange={(open) => {
-// // // // // // // //             setIsDialogOpen(open);
-// // // // // // // //             if (!open && status === 'ready') router.push(`/${locale}/dashboard`);
-// // // // // // // //           }}
-// // // // // // // //           trip={trip}
-// // // // // // // //           seatCount={tokenData?.seatCount || 1}
-// // // // // // // //           onSubmit={handleConfirmBooking}
-// // // // // // // //           isProcessing={status === 'confirming'}
-// // // // // // // //         />
-// // // // // // // //       )}
-// // // // // // // //     </div>
-// // // // // // // //   );
-// // // // // // // // }
-
-
-
-
-// // // // // // // 'use client';
-
-// // // // // // // import { useEffect, useState } from 'react';
-// // // // // // // import { useSearchParams, useRouter } from 'next/navigation';
-// // // // // // // import { useFirestore, useUser } from '@/firebase';
-// // // // // // // import { doc, getDoc, collection, serverTimestamp, writeBatch, arrayUnion, increment, setDoc } from 'firebase/firestore';
-// // // // // // // import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-// // // // // // // import { Button } from '@/components/ui/button';
-// // // // // // // import { BookingDialog } from '@/components/booking-dialog';
-// // // // // // // import type { Trip, PassengerDetails } from '@/lib/data';
-// // // // // // // import { useLocale, useTranslations } from 'next-intl';
-// // // // // // // import { sendPush } from "@/lib/send-push";
-
-// // // // // // // /**
-// // // // // // //  * @file src/app/[locale]/confirm-booking/page.tsx
-// // // // // // //  * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V6.0)
-// // // // // // //  * [FIX]: لو الـ token فيه bookingId (جاي من وكيل) → يحدّث الـ booking الموجود
-// // // // // // //  *        بدل ما يعمل booking جديد — عشان بيانات المسافر تظهر عند الناقل
-// // // // // // //  */
-
-// // // // // // // type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
-
-// // // // // // // export default function ConfirmBookingPage() {
-// // // // // // //   const searchParams = useSearchParams();
-// // // // // // //   const router = useRouter();
-// // // // // // //   const firestore = useFirestore();
-// // // // // // //   const { user } = useUser();
-// // // // // // //   const locale = useLocale();
-// // // // // // //   const tError = useTranslations('errorDictionary');
-// // // // // // //   const t = useTranslations('ConfirmBooking');
-// // // // // // //   const token = searchParams.get('token');
-
-// // // // // // //   const [status, setStatus] = useState<Status>('loading');
-// // // // // // //   const [tokenData, setTokenData] = useState<any>(null);
-// // // // // // //   const [trip, setTrip] = useState<Trip | null>(null);
-// // // // // // //   const [isDialogOpen, setIsDialogOpen] = useState(false);
-// // // // // // //   const [errorCode, setErrorCode] = useState('DEFAULT');
-
-// // // // // // //   useEffect(() => {
-// // // // // // //     if (!token || !firestore) return;
-
-// // // // // // //     const verifyToken = async () => {
-// // // // // // //       try {
-// // // // // // //         const tokenRef = doc(firestore, 'booking_tokens', token);
-// // // // // // //         const tokenSnap = await getDoc(tokenRef);
-
-// // // // // // //         if (!tokenSnap.exists()) {
-// // // // // // //           setStatus('error');
-// // // // // // //           setErrorCode('TOKEN_INVALID');
-// // // // // // //           return;
-// // // // // // //         }
-
-// // // // // // //         const data = tokenSnap.data();
-
-// // // // // // //         if (data.status === 'used') {
-// // // // // // //           setStatus('error');
-// // // // // // //           setErrorCode('TOKEN_USED');
-// // // // // // //           return;
-// // // // // // //         }
-
-// // // // // // //         const expiresAt = data.expiresAt?.toDate?.() || new Date(data.expiresAt);
-// // // // // // //         if (new Date() > expiresAt) {
-// // // // // // //           setStatus('error');
-// // // // // // //           setErrorCode('TOKEN_EXPIRED');
-// // // // // // //           return;
-// // // // // // //         }
-
-// // // // // // //         const tripRef = doc(firestore, 'trips', data.tripId);
-// // // // // // //         const tripSnap = await getDoc(tripRef);
-
-// // // // // // //         if (!tripSnap.exists()) {
-// // // // // // //           setStatus('error');
-// // // // // // //           setErrorCode('TRIP_NOT_FOUND');
-// // // // // // //           return;
-// // // // // // //         }
-
-// // // // // // //         setTokenData(data);
-// // // // // // //         setTrip({ id: tripSnap.id, ...tripSnap.data() } as Trip);
-// // // // // // //         setStatus('ready');
-// // // // // // //         setIsDialogOpen(true);
-// // // // // // //       } catch (err) {
-// // // // // // //         console.error('[VerifyToken Error]', err);
-// // // // // // //         setStatus('error');
-// // // // // // //         setErrorCode('VERIFICATION_FAILED');
-// // // // // // //       }
-// // // // // // //     };
-
-// // // // // // //     verifyToken();
-// // // // // // //   }, [token, firestore]);
-
-// // // // // // //   const handleConfirmBooking = async (passengers: PassengerDetails[]) => {
-// // // // // // //     if (!firestore || !tokenData || !trip || !token) throw new Error('MISSING_DATA');
-// // // // // // //     if (!user?.uid) throw new Error('AUTH_REQUIRED');
-
-// // // // // // //     setStatus('confirming');
-
-// // // // // // //     try {
-// // // // // // //       const batch = writeBatch(firestore);
-// // // // // // //       const tokenRef = doc(firestore, 'booking_tokens', token);
-
-// // // // // // //       // ══════════════════════════════════════════════════════════════════
-// // // // // // //       // [FIX - SC-806 V6.0]: المسار الجاي من وكيل
-// // // // // // //       // لو في bookingId في الـ token → الـ booking موجود (عمله الوكيل)
-// // // // // // //       // المسافر بس يكمّل البيانات ويدفع الغربون
-// // // // // // //       // ══════════════════════════════════════════════════════════════════
-// // // // // // //       if (tokenData.bookingId) {
-// // // // // // //         const existingBookingRef = doc(firestore, 'bookings', tokenData.bookingId);
-
-// // // // // // //         // تحديث الـ booking الموجود ببيانات المسافر
-// // // // // // //         batch.update(existingBookingRef, {
-// // // // // // //           userId: user.uid,
-// // // // // // //           passengersDetails: passengers,
-// // // // // // //           seats: passengers.length,
-// // // // // // //           depositPaid: true,
-// // // // // // //           verifiedEmail: tokenData.email || null,
-// // // // // // //           status: 'Pending-Carrier-Confirmation', // يفضل نفسه — الناقل هيشوفه
-// // // // // // //           updatedAt: serverTimestamp(),
-// // // // // // //         });
-
-// // // // // // //         // تعليم التوكن كمستخدم
-// // // // // // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
-
-// // // // // // //         // تقليل المقاعد من رحلة الناقل
-// // // // // // //         if (tokenData.carrierTripId) {
-// // // // // // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// // // // // // //           batch.update(carrierTripRef, {
-// // // // // // //             availableSeats: increment(-passengers.length),
-// // // // // // //             bookingIds: arrayUnion(tokenData.bookingId),
-// // // // // // //             updatedAt: serverTimestamp(),
-// // // // // // //           });
-// // // // // // //         }
-
-// // // // // // //         // ربط المسافر بالحجز في بروفايله
-// // // // // // //         const userRef = doc(firestore, 'users', user.uid);
-// // // // // // //         // [FIX]: set+merge بدل update — لو الـ user doc مش موجود ميفشلش
-// // // // // // //         batch.set(userRef, {
-// // // // // // //           activeBookingId: tokenData.bookingId,
-// // // // // // //           activeIntentId: null,
-// // // // // // //           updatedAt: serverTimestamp(),
-// // // // // // //         }, { merge: true });
-
-// // // // // // //         // إشعار للناقل إن المسافر دفع وأكمل البيانات
-// // // // // // //         if (trip.carrierId) {
-// // // // // // //           const notifRef = doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'));
-// // // // // // //           batch.set(notifRef, {
-// // // // // // //             userId: trip.carrierId,
-// // // // // // //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// // // // // // //             message: `المسافر "${passengers[0]?.name || ''}" أكمل بياناته ودفع الغربون — ${passengers.length} مقعد`,
-// // // // // // //             type: 'passenger_deposit_paid',
-// // // // // // //             bookingId: tokenData.bookingId,
-// // // // // // //             isRead: false,
-// // // // // // //             link: `/${locale}/carrier/bookings`,
-// // // // // // //             createdAt: serverTimestamp(),
-// // // // // // //           });
-// // // // // // //         }
-
-// // // // // // //         await batch.commit();
-
-// // // // // // //         // FCM Push للناقل
-// // // // // // //         if (trip.carrierId) {
-// // // // // // //           await sendPush({
-// // // // // // //             userId: trip.carrierId,
-// // // // // // //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// // // // // // //             body: `${passengers[0]?.name || 'مسافر'} دفع الغربون — ${passengers.length} مقعد`,
-// // // // // // //             data: { type: 'passenger_deposit_paid', bookingId: tokenData.bookingId },
-// // // // // // //           });
-// // // // // // //         }
-
-// // // // // // //         // محاولة الانضمام للـ group chat
-// // // // // // //         try {
-// // // // // // //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// // // // // // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// // // // // // //         } catch (e) {
-// // // // // // //           console.warn('[GroupChat] Could not join:', e);
-// // // // // // //         }
-
-// // // // // // //       } else {
-// // // // // // //         // ══════════════════════════════════════════════════════════════════
-// // // // // // //         // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
-// // // // // // //         // ══════════════════════════════════════════════════════════════════
-// // // // // // //         const bookingRef = doc(collection(firestore, 'bookings'));
-// // // // // // //         const notificationRef = trip.carrierId
-// // // // // // //           ? doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'))
-// // // // // // //           : null;
-
-// // // // // // //         batch.set(bookingRef, {
-// // // // // // //           id: bookingRef.id,
-// // // // // // //           tripId: trip.id,
-// // // // // // //           carrierTripId: tokenData.carrierTripId || null,
-// // // // // // //           userId: user.uid,
-// // // // // // //           carrierId: trip.carrierId || tokenData.carrierId,
-// // // // // // //           seats: passengers.length,
-// // // // // // //           passengersDetails: passengers,
-// // // // // // //           status: 'Pending-Carrier-Confirmation',
-// // // // // // //           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
-// // // // // // //           currency: tokenData.currency || trip.currency || 'JOD',
-// // // // // // //           verifiedEmail: tokenData.email || null,
-// // // // // // //           bookedByAgent: false,
-// // // // // // //           createdAt: serverTimestamp(),
-// // // // // // //           updatedAt: serverTimestamp(),
-// // // // // // //         });
-
-// // // // // // //         // تعليم التوكن كمستخدم
-// // // // // // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
-
-// // // // // // //         // تقليل المقاعد
-// // // // // // //         if (tokenData.carrierTripId) {
-// // // // // // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// // // // // // //           batch.update(carrierTripRef, {
-// // // // // // //             availableSeats: increment(-passengers.length),
-// // // // // // //             bookingIds: arrayUnion(bookingRef.id),
-// // // // // // //             updatedAt: serverTimestamp(),
-// // // // // // //           });
-// // // // // // //         }
-
-// // // // // // //         // ربط المسافر بالحجز
-// // // // // // //         const userRef = doc(firestore, 'users', user.uid);
-// // // // // // //         // [FIX]: set+merge بدل update — لو الـ user doc مش موجود ميفشلش
-// // // // // // //         batch.set(userRef, {
-// // // // // // //           activeBookingId: bookingRef.id,
-// // // // // // //           activeIntentId: null,
-// // // // // // //           updatedAt: serverTimestamp(),
-// // // // // // //         }, { merge: true });
-
-// // // // // // //         // إشعار للناقل
-// // // // // // //         if (trip.carrierId && notificationRef) {
-// // // // // // //           batch.set(notificationRef, {
-// // // // // // //             userId: trip.carrierId,
-// // // // // // //             title: 'طلب حجز جديد 🎫',
-// // // // // // //             message: `مسافر يطلب حجز ${passengers.length} مقعد من ${trip.origin} إلى ${trip.destination}`,
-// // // // // // //             type: 'new_booking_request',
-// // // // // // //             isRead: false,
-// // // // // // //             link: `/${locale}/carrier/bookings`,
-// // // // // // //             createdAt: serverTimestamp(),
-// // // // // // //           });
-// // // // // // //         }
-
-// // // // // // //         await batch.commit();
-
-// // // // // // //         // FCM Push للناقل
-// // // // // // //         if (trip.carrierId) {
-// // // // // // //           await sendPush({
-// // // // // // //             userId: trip.carrierId,
-// // // // // // //             title: 'طلب حجز جديد 🎫',
-// // // // // // //             body: `مسافر يطلب حجز ${passengers.length} مقعد من ${trip.origin} إلى ${trip.destination}`,
-// // // // // // //             data: { type: 'new_booking_request' },
-// // // // // // //           });
-// // // // // // //         }
-
-// // // // // // //         // محاولة الانضمام للـ group chat
-// // // // // // //         try {
-// // // // // // //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// // // // // // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// // // // // // //         } catch (e) {
-// // // // // // //           console.warn('[GroupChat] Could not join:', e);
-// // // // // // //         }
-// // // // // // //       }
-
-// // // // // // //       setIsDialogOpen(false);
-// // // // // // //       setStatus('success');
-
-// // // // // // //     } catch (err) {
-// // // // // // //       console.error('[ConfirmBooking Error]', err);
-// // // // // // //       setStatus('error');
-// // // // // // //       setErrorCode('OPERATION_FAILED');
-// // // // // // //       throw err;
-// // // // // // //     }
-// // // // // // //   };
-
-// // // // // // //   return (
-// // // // // // //     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background" dir="rtl">
-
-// // // // // // //       {status === 'loading' && (
-// // // // // // //         <div className="text-center space-y-4">
-// // // // // // //           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-// // // // // // //           <p className="text-muted-foreground">جاري فحص الختم الرقمي...</p>
-// // // // // // //         </div>
-// // // // // // //       )}
-
-// // // // // // //       {(status === 'ready' || status === 'confirming') && trip && (
-// // // // // // //         <div className="text-center space-y-4">
-// // // // // // //           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-// // // // // // //           <p className="text-muted-foreground">جاري استرجاع بيانات الرحلة...</p>
-// // // // // // //         </div>
-// // // // // // //       )}
-
-// // // // // // //       {status === 'success' && (
-// // // // // // //         <div className="text-center space-y-6 max-w-md animate-in zoom-in duration-500">
-// // // // // // //           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto" />
-// // // // // // //           <h1 className="text-2xl font-bold text-white">{t('accptReq')} 🎉</h1>
-// // // // // // //           <Button className="w-full" onClick={() => router.push(`/${locale}/history`)}>
-// // // // // // //             {t('gotoReq')}
-// // // // // // //           </Button>
-// // // // // // //         </div>
-// // // // // // //       )}
-
-// // // // // // //       {status === 'error' && (
-// // // // // // //         <div className="text-center space-y-6 max-w-md animate-in shake duration-500">
-// // // // // // //           <XCircle className="h-20 w-20 text-red-500 mx-auto" />
-// // // // // // //           <h1 className="text-2xl font-bold">تنبيه سيادي</h1>
-// // // // // // //           <p className="text-muted-foreground">{tError(errorCode)}</p>
-// // // // // // //           <Button className="w-full" onClick={() => router.push(`/${locale}/dashboard`)}>
-// // // // // // //             العودة للرئيسية
-// // // // // // //           </Button>
-// // // // // // //         </div>
-// // // // // // //       )}
-
-// // // // // // //       {trip && isDialogOpen && (
-// // // // // // //         <BookingDialog
-// // // // // // //           isOpen={isDialogOpen}
-// // // // // // //           onOpenChange={(open) => {
-// // // // // // //             setIsDialogOpen(open);
-// // // // // // //             if (!open && status === 'ready') router.push(`/${locale}/dashboard`);
-// // // // // // //           }}
-// // // // // // //           trip={trip}
-// // // // // // //           seatCount={tokenData?.seatCount || 1}
-// // // // // // //           onSubmit={handleConfirmBooking}
-// // // // // // //           isProcessing={status === 'confirming'}
-// // // // // // //         />
-// // // // // // //       )}
-// // // // // // //     </div>
-// // // // // // //   );
-// // // // // // // }
-
-
-// // // // // // 'use client';
-
-// // // // // // import { useEffect, useState } from 'react';
-// // // // // // import { useSearchParams, useRouter } from 'next/navigation';
-// // // // // // import { useFirestore, useUser } from '@/firebase';
-// // // // // // import { doc, getDoc, collection, serverTimestamp, writeBatch, arrayUnion, increment, setDoc } from 'firebase/firestore';
-// // // // // // import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-// // // // // // import { Button } from '@/components/ui/button';
-// // // // // // import { BookingDialog } from '@/components/booking-dialog';
-// // // // // // import type { Trip, PassengerDetails } from '@/lib/data';
-// // // // // // import { useLocale, useTranslations } from 'next-intl';
-// // // // // // import { sendPush } from "@/lib/send-push";
-
-// // // // // // /**
-// // // // // //  * @file src/app/[locale]/confirm-booking/page.tsx
-// // // // // //  * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V6.0)
-// // // // // //  * [FIX]: لو الـ token فيه bookingId (جاي من وكيل) → يحدّث الـ booking الموجود
-// // // // // //  *        بدل ما يعمل booking جديد — عشان بيانات المسافر تظهر عند الناقل
-// // // // // //  */
-
-// // // // // // type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
-
-// // // // // // export default function ConfirmBookingPage() {
-// // // // // //   const searchParams = useSearchParams();
-// // // // // //   const router = useRouter();
-// // // // // //   const firestore = useFirestore();
-// // // // // //   const { user } = useUser();
-// // // // // //   const locale = useLocale();
-// // // // // //   const tError = useTranslations('errorDictionary');
-// // // // // //   const t = useTranslations('ConfirmBooking');
-// // // // // //   const token = searchParams.get('token');
-
-// // // // // //   const [status, setStatus] = useState<Status>('loading');
-// // // // // //   const [tokenData, setTokenData] = useState<any>(null);
-// // // // // //   const [trip, setTrip] = useState<Trip | null>(null);
-// // // // // //   const [isDialogOpen, setIsDialogOpen] = useState(false);
-// // // // // //   const [errorCode, setErrorCode] = useState('DEFAULT');
-
-// // // // // //   useEffect(() => {
-// // // // // //     if (!token || !firestore) return;
-
-// // // // // //     const verifyToken = async () => {
-// // // // // //       try {
-// // // // // //         const tokenRef = doc(firestore, 'booking_tokens', token);
-// // // // // //         const tokenSnap = await getDoc(tokenRef);
-
-// // // // // //         if (!tokenSnap.exists()) {
-// // // // // //           setStatus('error');
-// // // // // //           setErrorCode('TOKEN_INVALID');
-// // // // // //           return;
-// // // // // //         }
-
-// // // // // //         const data = tokenSnap.data();
-
-// // // // // //         if (data.status === 'used') {
-// // // // // //           setStatus('error');
-// // // // // //           setErrorCode('TOKEN_USED');
-// // // // // //           return;
-// // // // // //         }
-
-// // // // // //         const expiresAt = data.expiresAt?.toDate?.() || new Date(data.expiresAt);
-// // // // // //         if (new Date() > expiresAt) {
-// // // // // //           setStatus('error');
-// // // // // //           setErrorCode('TOKEN_EXPIRED');
-// // // // // //           return;
-// // // // // //         }
-
-// // // // // //         const tripRef = doc(firestore, 'trips', data.tripId);
-// // // // // //         const tripSnap = await getDoc(tripRef);
-
-// // // // // //         if (!tripSnap.exists()) {
-// // // // // //           setStatus('error');
-// // // // // //           setErrorCode('TRIP_NOT_FOUND');
-// // // // // //           return;
-// // // // // //         }
-
-// // // // // //         setTokenData(data);
-// // // // // //         setTrip({ id: tripSnap.id, ...tripSnap.data() } as Trip);
-// // // // // //         setStatus('ready');
-// // // // // //         setIsDialogOpen(true);
-// // // // // //       } catch (err) {
-// // // // // //         console.error('[VerifyToken Error]', err);
-// // // // // //         setStatus('error');
-// // // // // //         setErrorCode('VERIFICATION_FAILED');
-// // // // // //       }
-// // // // // //     };
-
-// // // // // //     verifyToken();
-// // // // // //   }, [token, firestore]);
-
-// // // // // //   const handleConfirmBooking = async (passengers: PassengerDetails[]) => {
-// // // // // //     if (!firestore || !tokenData || !trip || !token) throw new Error('MISSING_DATA');
-// // // // // //     if (!user?.uid) throw new Error('AUTH_REQUIRED');
-
-// // // // // //     setStatus('confirming');
-
-// // // // // //     try {
-// // // // // //       const batch = writeBatch(firestore);
-// // // // // //       const tokenRef = doc(firestore, 'booking_tokens', token);
-
-// // // // // //       // ══════════════════════════════════════════════════════════════════
-// // // // // //       // [FIX - SC-806 V6.0]: المسار الجاي من وكيل
-// // // // // //       // لو في bookingId في الـ token → الـ booking موجود (عمله الوكيل)
-// // // // // //       // المسافر بس يكمّل البيانات ويدفع الغربون
-// // // // // //       // ══════════════════════════════════════════════════════════════════
-// // // // // //       if (tokenData.bookingId) {
-// // // // // //         const existingBookingRef = doc(firestore, 'bookings', tokenData.bookingId);
-
-// // // // // //         // تحديث الـ booking الموجود ببيانات المسافر
-// // // // // //         batch.update(existingBookingRef, {
-// // // // // //           userId: user.uid,
-// // // // // //           passengersDetails: passengers,
-// // // // // //           seats: passengers.length,
-// // // // // //           depositPaid: true,
-// // // // // //           verifiedEmail: tokenData.email || null,
-// // // // // //           status: 'Pending-Carrier-Confirmation', // يفضل نفسه — الناقل هيشوفه
-// // // // // //           updatedAt: serverTimestamp(),
-// // // // // //         });
-
-// // // // // //         // تعليم التوكن كمستخدم
-// // // // // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
-
-// // // // // //         // ✅ [FIX]: لا نخصم المقاعد هنا — الخصم يكون بعد موافقة الناقل فقط
-// // // // // //         // availableSeats بتتخصم في verifyBookingReceipt (use-trip-actions) بعد تأكيد الناقل
-// // // // // //         if (tokenData.carrierTripId) {
-// // // // // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// // // // // //           batch.update(carrierTripRef, {
-// // // // // //             bookingIds: arrayUnion(tokenData.bookingId),
-// // // // // //             updatedAt: serverTimestamp(),
-// // // // // //           });
-// // // // // //         }
-
-// // // // // //         // ربط المسافر بالحجز في بروفايله
-// // // // // //         const userRef = doc(firestore, 'users', user.uid);
-// // // // // //         // [FIX]: set+merge بدل update — لو الـ user doc مش موجود ميفشلش
-// // // // // //         batch.set(userRef, {
-// // // // // //           activeBookingId: tokenData.bookingId,
-// // // // // //           activeIntentId: null,
-// // // // // //           updatedAt: serverTimestamp(),
-// // // // // //         }, { merge: true });
-
-// // // // // //         // إشعار للناقل إن المسافر دفع وأكمل البيانات
-// // // // // //         if (trip.carrierId) {
-// // // // // //           const notifRef = doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'));
-// // // // // //           batch.set(notifRef, {
-// // // // // //             userId: trip.carrierId,
-// // // // // //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// // // // // //             message: `المسافر "${passengers[0]?.name || ''}" أكمل بياناته ودفع الغربون — ${passengers.length} مقعد`,
-// // // // // //             type: 'passenger_deposit_paid',
-// // // // // //             bookingId: tokenData.bookingId,
-// // // // // //             isRead: false,
-// // // // // //             link: `/${locale}/carrier/bookings`,
-// // // // // //             createdAt: serverTimestamp(),
-// // // // // //           });
-// // // // // //         }
-
-// // // // // //         await batch.commit();
-
-// // // // // //         // FCM Push للناقل
-// // // // // //         if (trip.carrierId) {
-// // // // // //           await sendPush({
-// // // // // //             userId: trip.carrierId,
-// // // // // //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// // // // // //             body: `${passengers[0]?.name || 'مسافر'} دفع الغربون — ${passengers.length} مقعد`,
-// // // // // //             data: { type: 'passenger_deposit_paid', bookingId: tokenData.bookingId },
-// // // // // //           });
-// // // // // //         }
-
-// // // // // //         // محاولة الانضمام للـ group chat
-// // // // // //         try {
-// // // // // //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// // // // // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// // // // // //         } catch (e) {
-// // // // // //           console.warn('[GroupChat] Could not join:', e);
-// // // // // //         }
-
-// // // // // //       } else {
-// // // // // //         // ══════════════════════════════════════════════════════════════════
-// // // // // //         // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
-// // // // // //         // ══════════════════════════════════════════════════════════════════
-// // // // // //         const bookingRef = doc(collection(firestore, 'bookings'));
-// // // // // //         const notificationRef = trip.carrierId
-// // // // // //           ? doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'))
-// // // // // //           : null;
-
-// // // // // //         batch.set(bookingRef, {
-// // // // // //           id: bookingRef.id,
-// // // // // //           tripId: trip.id,
-// // // // // //           carrierTripId: tokenData.carrierTripId || null,
-// // // // // //           userId: user.uid,
-// // // // // //           carrierId: trip.carrierId || tokenData.carrierId,
-// // // // // //           seats: passengers.length,
-// // // // // //           passengersDetails: passengers,
-// // // // // //           status: 'Pending-Carrier-Confirmation',
-// // // // // //           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
-// // // // // //           currency: tokenData.currency || trip.currency || 'JOD',
-// // // // // //           verifiedEmail: tokenData.email || null,
-// // // // // //           bookedByAgent: false,
-// // // // // //           createdAt: serverTimestamp(),
-// // // // // //           updatedAt: serverTimestamp(),
-// // // // // //         });
-
-// // // // // //         // تعليم التوكن كمستخدم
-// // // // // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
-
-// // // // // //         // ✅ [FIX]: لا نخصم المقاعد هنا — الخصم بعد موافقة الناقل فقط
-// // // // // //         if (tokenData.carrierTripId) {
-// // // // // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// // // // // //           batch.update(carrierTripRef, {
-// // // // // //             bookingIds: arrayUnion(bookingRef.id),
-// // // // // //             updatedAt: serverTimestamp(),
-// // // // // //           });
-// // // // // //         }
-
-// // // // // //         // ربط المسافر بالحجز
-// // // // // //         const userRef = doc(firestore, 'users', user.uid);
-// // // // // //         // [FIX]: set+merge بدل update — لو الـ user doc مش موجود ميفشلش
-// // // // // //         batch.set(userRef, {
-// // // // // //           activeBookingId: bookingRef.id,
-// // // // // //           activeIntentId: null,
-// // // // // //           updatedAt: serverTimestamp(),
-// // // // // //         }, { merge: true });
-
-// // // // // //         // إشعار للناقل
-// // // // // //         if (trip.carrierId && notificationRef) {
-// // // // // //           batch.set(notificationRef, {
-// // // // // //             userId: trip.carrierId,
-// // // // // //             title: 'طلب حجز جديد 🎫',
-// // // // // //             message: `مسافر يطلب حجز ${passengers.length} مقعد من ${trip.origin} إلى ${trip.destination}`,
-// // // // // //             type: 'new_booking_request',
-// // // // // //             isRead: false,
-// // // // // //             link: `/${locale}/carrier/bookings`,
-// // // // // //             createdAt: serverTimestamp(),
-// // // // // //           });
-// // // // // //         }
-
-// // // // // //         await batch.commit();
-
-// // // // // //         // FCM Push للناقل
-// // // // // //         if (trip.carrierId) {
-// // // // // //           await sendPush({
-// // // // // //             userId: trip.carrierId,
-// // // // // //             title: 'طلب حجز جديد 🎫',
-// // // // // //             body: `مسافر يطلب حجز ${passengers.length} مقعد من ${trip.origin} إلى ${trip.destination}`,
-// // // // // //             data: { type: 'new_booking_request' },
-// // // // // //           });
-// // // // // //         }
-
-// // // // // //         // محاولة الانضمام للـ group chat
-// // // // // //         try {
-// // // // // //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// // // // // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// // // // // //         } catch (e) {
-// // // // // //           console.warn('[GroupChat] Could not join:', e);
-// // // // // //         }
-// // // // // //       }
-
-// // // // // //       setIsDialogOpen(false);
-// // // // // //       setStatus('success');
-
-// // // // // //     } catch (err) {
-// // // // // //       console.error('[ConfirmBooking Error]', err);
-// // // // // //       setStatus('error');
-// // // // // //       setErrorCode('OPERATION_FAILED');
-// // // // // //       throw err;
-// // // // // //     }
-// // // // // //   };
-
-// // // // // //   return (
-// // // // // //     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background" dir="rtl">
-
-// // // // // //       {status === 'loading' && (
-// // // // // //         <div className="text-center space-y-4">
-// // // // // //           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-// // // // // //           <p className="text-muted-foreground">جاري فحص الختم الرقمي...</p>
-// // // // // //         </div>
-// // // // // //       )}
-
-// // // // // //       {(status === 'ready' || status === 'confirming') && trip && (
-// // // // // //         <div className="text-center space-y-4">
-// // // // // //           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-// // // // // //           <p className="text-muted-foreground">جاري استرجاع بيانات الرحلة...</p>
-// // // // // //         </div>
-// // // // // //       )}
-
-// // // // // //       {status === 'success' && (
-// // // // // //         <div className="text-center space-y-6 max-w-md animate-in zoom-in duration-500">
-// // // // // //           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto" />
-// // // // // //           <h1 className="text-2xl font-bold text-white">{t('accptReq')} 🎉</h1>
-// // // // // //           <Button className="w-full" onClick={() => router.push(`/${locale}/history`)}>
-// // // // // //             {t('gotoReq')}
-// // // // // //           </Button>
-// // // // // //         </div>
-// // // // // //       )}
-
-// // // // // //       {status === 'error' && (
-// // // // // //         <div className="text-center space-y-6 max-w-md animate-in shake duration-500">
-// // // // // //           <XCircle className="h-20 w-20 text-red-500 mx-auto" />
-// // // // // //           <h1 className="text-2xl font-bold">تنبيه سيادي</h1>
-// // // // // //           <p className="text-muted-foreground">{tError(errorCode)}</p>
-// // // // // //           <Button className="w-full" onClick={() => router.push(`/${locale}/dashboard`)}>
-// // // // // //             العودة للرئيسية
-// // // // // //           </Button>
-// // // // // //         </div>
-// // // // // //       )}
-
-// // // // // //       {trip && isDialogOpen && (
-// // // // // //         <BookingDialog
-// // // // // //           isOpen={isDialogOpen}
-// // // // // //           onOpenChange={(open) => {
-// // // // // //             setIsDialogOpen(open);
-// // // // // //             if (!open && status === 'ready') router.push(`/${locale}/dashboard`);
-// // // // // //           }}
-// // // // // //           trip={trip}
-// // // // // //           seatCount={tokenData?.seatCount || 1}
-// // // // // //           onSubmit={handleConfirmBooking}
-// // // // // //           isProcessing={status === 'confirming'}
-// // // // // //         />
-// // // // // //       )}
-// // // // // //     </div>
-// // // // // //   );
-// // // // // // }
-
-// // // // // 'use client';
-
-// // // // // import { useEffect, useState } from 'react';
-// // // // // import { useSearchParams, useRouter } from 'next/navigation';
-// // // // // import { useFirestore, useUser } from '@/firebase';
-// // // // // import { doc, getDoc, collection, serverTimestamp, writeBatch, arrayUnion, increment, setDoc } from 'firebase/firestore';
-// // // // // import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-// // // // // import { Button } from '@/components/ui/button';
-// // // // // import { BookingDialog } from '@/components/booking-dialog';
-// // // // // import type { Trip, PassengerDetails } from '@/lib/data';
-// // // // // import { useLocale, useTranslations } from 'next-intl';
-// // // // // import { sendPush } from "@/lib/send-push";
-
-// // // // // /**
-// // // // //  * @file src/app/[locale]/confirm-booking/page.tsx
-// // // // //  * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V6.0)
-// // // // //  * [FIX]: لو الـ token فيه bookingId (جاي من وكيل) → يحدّث الـ booking الموجود
-// // // // //  *        بدل ما يعمل booking جديد — عشان بيانات المسافر تظهر عند الناقل
-// // // // //  */
-
-// // // // // type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
-
-// // // // // export default function ConfirmBookingPage() {
-// // // // //   const searchParams = useSearchParams();
-// // // // //   const router = useRouter();
-// // // // //   const firestore = useFirestore();
-// // // // //   const { user } = useUser();
-// // // // //   const locale = useLocale();
-// // // // //   const tError = useTranslations('errorDictionary');
-// // // // //   const t = useTranslations('ConfirmBooking');
-// // // // //   const token = searchParams.get('token');
-
-// // // // //   const [status, setStatus] = useState<Status>('loading');
-// // // // //   const [tokenData, setTokenData] = useState<any>(null);
-// // // // //   const [trip, setTrip] = useState<Trip | null>(null);
-// // // // //   const [isDialogOpen, setIsDialogOpen] = useState(false);
-// // // // //   const [errorCode, setErrorCode] = useState('DEFAULT');
-
-// // // // //   useEffect(() => {
-// // // // //     if (!token || !firestore) return;
-
-// // // // //     const verifyToken = async () => {
-// // // // //       try {
-// // // // //         const tokenRef = doc(firestore, 'booking_tokens', token);
-// // // // //         const tokenSnap = await getDoc(tokenRef);
-
-// // // // //         if (!tokenSnap.exists()) {
-// // // // //           setStatus('error');
-// // // // //           setErrorCode('TOKEN_INVALID');
-// // // // //           return;
-// // // // //         }
-
-// // // // //         const data = tokenSnap.data();
-
-// // // // //         if (data.status === 'used') {
-// // // // //           setStatus('error');
-// // // // //           setErrorCode('TOKEN_USED');
-// // // // //           return;
-// // // // //         }
-
-// // // // //         const expiresAt = data.expiresAt?.toDate?.() || new Date(data.expiresAt);
-// // // // //         if (new Date() > expiresAt) {
-// // // // //           setStatus('error');
-// // // // //           setErrorCode('TOKEN_EXPIRED');
-// // // // //           return;
-// // // // //         }
-
-// // // // //         const tripRef = doc(firestore, 'trips', data.tripId);
-// // // // //         const tripSnap = await getDoc(tripRef);
-
-// // // // //         if (!tripSnap.exists()) {
-// // // // //           setStatus('error');
-// // // // //           setErrorCode('TRIP_NOT_FOUND');
-// // // // //           return;
-// // // // //         }
-
-// // // // //         setTokenData(data);
-// // // // //         setTrip({ id: tripSnap.id, ...tripSnap.data() } as Trip);
-// // // // //         setStatus('ready');
-// // // // //         setIsDialogOpen(true);
-// // // // //       } catch (err) {
-// // // // //         console.error('[VerifyToken Error]', err);
-// // // // //         setStatus('error');
-// // // // //         setErrorCode('VERIFICATION_FAILED');
-// // // // //       }
-// // // // //     };
-
-// // // // //     verifyToken();
-// // // // //   }, [token, firestore]);
-
-// // // // //   const handleConfirmBooking = async (passengers: PassengerDetails[]) => {
-// // // // //     if (!firestore || !tokenData || !trip || !token) throw new Error('MISSING_DATA');
-// // // // //     if (!user?.uid) throw new Error('AUTH_REQUIRED');
-
-// // // // //     setStatus('confirming');
-
-// // // // //     try {
-// // // // //       const batch = writeBatch(firestore);
-// // // // //       const tokenRef = doc(firestore, 'booking_tokens', token);
-
-// // // // //       // ══════════════════════════════════════════════════════════════════
-// // // // //       // [FIX - SC-806 V6.0]: المسار الجاي من وكيل
-// // // // //       // لو في bookingId في الـ token → الـ booking موجود (عمله الوكيل)
-// // // // //       // المسافر بس يكمّل البيانات ويدفع الغربون
-// // // // //       // ══════════════════════════════════════════════════════════════════
-// // // // //       if (tokenData.bookingId) {
-// // // // //         const existingBookingRef = doc(firestore, 'bookings', tokenData.bookingId);
-
-// // // // //         // تحديث الـ booking الموجود ببيانات المسافر
-// // // // //         batch.update(existingBookingRef, {
-// // // // //           userId: user.uid,
-// // // // //           passengersDetails: passengers,
-// // // // //           seats: passengers.length,
-// // // // //           depositPaid: true,
-// // // // //           verifiedEmail: tokenData.email || null,
-// // // // //           status: 'Pending-Carrier-Confirmation', // يفضل نفسه — الناقل هيشوفه
-// // // // //           updatedAt: serverTimestamp(),
-// // // // //         });
-
-// // // // //         // تعليم التوكن كمستخدم
-// // // // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
-
-// // // // //         // ✅ [FIX]: لا نخصم المقاعد هنا — الخصم يكون بعد موافقة الناقل فقط
-// // // // //         // availableSeats بتتخصم في verifyBookingReceipt (use-trip-actions) بعد تأكيد الناقل
-// // // // //         if (tokenData.carrierTripId) {
-// // // // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// // // // //           batch.update(carrierTripRef, {
-// // // // //             bookingIds: arrayUnion(tokenData.bookingId),
-// // // // //             updatedAt: serverTimestamp(),
-// // // // //           });
-// // // // //         }
-
-// // // // //         // ربط المسافر بالحجز في بروفايله
-// // // // //         const userRef = doc(firestore, 'users', user.uid);
-// // // // //         // [FIX]: set+merge بدل update — لو الـ user doc مش موجود ميفشلش
-// // // // //         batch.set(userRef, {
-// // // // //           activeBookingId: tokenData.bookingId,
-// // // // //           activeIntentId: null,
-// // // // //           updatedAt: serverTimestamp(),
-// // // // //         }, { merge: true });
-
-// // // // //         // إشعار للناقل إن المسافر دفع وأكمل البيانات
-// // // // //         if (trip.carrierId) {
-// // // // //           const notifRef = doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'));
-// // // // //           batch.set(notifRef, {
-// // // // //             userId: trip.carrierId,
-// // // // //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// // // // //             message: `المسافر "${passengers[0]?.name || ''}" أكمل بياناته ودفع الغربون — ${passengers.length} مقعد`,
-// // // // //             type: 'passenger_deposit_paid',
-// // // // //             bookingId: tokenData.bookingId,
-// // // // //             isRead: false,
-// // // // //             link: `/${locale}/carrier/bookings`,
-// // // // //             createdAt: serverTimestamp(),
-// // // // //           });
-// // // // //         }
-
-// // // // //         await batch.commit();
-
-// // // // //         // FCM Push للناقل
-// // // // //         if (trip.carrierId) {
-// // // // //           await sendPush({
-// // // // //             userId: trip.carrierId,
-// // // // //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// // // // //             body: `${passengers[0]?.name || 'مسافر'} دفع الغربون — ${passengers.length} مقعد`,
-// // // // //             data: { type: 'passenger_deposit_paid', bookingId: tokenData.bookingId },
-// // // // //           });
-// // // // //         }
-
-// // // // //         // محاولة الانضمام للـ group chat
-// // // // //         try {
-// // // // //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// // // // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// // // // //         } catch (e) {
-// // // // //           console.warn('[GroupChat] Could not join:', e);
-// // // // //         }
-
-// // // // //       } else {
-// // // // //         // ══════════════════════════════════════════════════════════════════
-// // // // //         // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
-// // // // //         // ══════════════════════════════════════════════════════════════════
-// // // // //         const bookingRef = doc(collection(firestore, 'bookings'));
-// // // // //         const notificationRef = trip.carrierId
-// // // // //           ? doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'))
-// // // // //           : null;
-
-// // // // //         batch.set(bookingRef, {
-// // // // //           id: bookingRef.id,
-// // // // //           tripId: trip.id,
-// // // // //           carrierTripId: null, // سيُعبأ بعد إنشاء الناقل للرحلة
-// // // // //           userId: user.uid,
-// // // // //           carrierId: trip.carrierId || tokenData.carrierId,
-// // // // //           seats: passengers.length,
-// // // // //           passengersDetails: passengers,
-// // // // //           status: 'Traveler-Accepted-Awaiting-Carrier',
-// // // // //           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
-// // // // //           currency: tokenData.currency || trip.currency || 'JOD',
-// // // // //           verifiedEmail: tokenData.email || null,
-// // // // //           bookedByAgent: false,
-// // // // //           // بيانات الطلب الأصلي للناقل
-// // // // //           requestOrigin: trip.origin,
-// // // // //           requestDestination: trip.destination,
-// // // // //           requestDepartureDate: trip.departureDate,
-// // // // //           requestPassengers: passengers.length,
-// // // // //           createdAt: serverTimestamp(),
-// // // // //           updatedAt: serverTimestamp(),
-// // // // //         });
-
-// // // // //         // تعليم التوكن كمستخدم
-// // // // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
-
-// // // // //         // ✅ [FIX]: لا نخصم المقاعد هنا — الخصم بعد موافقة الناقل فقط
-// // // // //         if (tokenData.carrierTripId) {
-// // // // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// // // // //           batch.update(carrierTripRef, {
-// // // // //             bookingIds: arrayUnion(bookingRef.id),
-// // // // //             updatedAt: serverTimestamp(),
-// // // // //           });
-// // // // //         }
-
-// // // // //         // ربط المسافر بالحجز
-// // // // //         const userRef = doc(firestore, 'users', user.uid);
-// // // // //         // [FIX]: set+merge بدل update — لو الـ user doc مش موجود ميفشلش
-// // // // //         batch.set(userRef, {
-// // // // //           activeBookingId: bookingRef.id,
-// // // // //           activeIntentId: null,
-// // // // //           updatedAt: serverTimestamp(),
-// // // // //         }, { merge: true });
-
-// // // // //         // تحديث طلب المسافر بالحالة الجديدة
-// // // // //         const tripUpdateRef = doc(firestore, 'trips', trip.id);
-// // // // //         batch.update(tripUpdateRef, {
-// // // // //           status: 'Traveler-Accepted-Awaiting-Carrier',
-// // // // //           pendingBookingId: bookingRef.id,
-// // // // //           updatedAt: serverTimestamp(),
-// // // // //         });
-
-// // // // //         // إشعار للناقل إنه يقبل ويُنشئ الرحلة
-// // // // //         if (trip.carrierId && notificationRef) {
-// // // // //           batch.set(notificationRef, {
-// // // // //             userId: trip.carrierId,
-// // // // //             title: 'المسافر وافق — في انتظار قبولك 🎉',
-// // // // //             message: `المسافر \"${passengers[0]?.name || ''}\" وافق على عرضك — اضغط لقبول الحجز وإنشاء الرحلة`,
-// // // // //             type: 'traveler_accepted_offer',
-// // // // //             bookingId: bookingRef.id,
-// // // // //             isRead: false,
-// // // // //             link: `/${locale}/carrier/bookings`,
-// // // // //             createdAt: serverTimestamp(),
-// // // // //           });
-// // // // //         }
-
-// // // // //         await batch.commit();
-
-// // // // //         // FCM Push للناقل
-// // // // //         if (trip.carrierId) {
-// // // // //           await sendPush({
-// // // // //             userId: trip.carrierId,
-// // // // //             title: 'المسافر وافق على عرضك! 🎉',
-// // // // //             body: `${passengers[0]?.name || 'مسافر'} وافق — افتح التطبيق وأنشئ الرحلة`,
-// // // // //             data: { type: 'traveler_accepted_offer' },
-// // // // //           });
-// // // // //         }
-
-// // // // //         // محاولة الانضمام للـ group chat
-// // // // //         try {
-// // // // //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// // // // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// // // // //         } catch (e) {
-// // // // //           console.warn('[GroupChat] Could not join:', e);
-// // // // //         }
-// // // // //       }
-
-// // // // //       setIsDialogOpen(false);
-// // // // //       setStatus('success');
-
-// // // // //     } catch (err) {
-// // // // //       console.error('[ConfirmBooking Error]', err);
-// // // // //       setStatus('error');
-// // // // //       setErrorCode('OPERATION_FAILED');
-// // // // //       throw err;
-// // // // //     }
-// // // // //   };
-
-// // // // //   return (
-// // // // //     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background" dir="rtl">
-
-// // // // //       {status === 'loading' && (
-// // // // //         <div className="text-center space-y-4">
-// // // // //           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-// // // // //           <p className="text-muted-foreground">جاري فحص الختم الرقمي...</p>
-// // // // //         </div>
-// // // // //       )}
-
-// // // // //       {(status === 'ready' || status === 'confirming') && trip && (
-// // // // //         <div className="text-center space-y-4">
-// // // // //           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-// // // // //           <p className="text-muted-foreground">جاري استرجاع بيانات الرحلة...</p>
-// // // // //         </div>
-// // // // //       )}
-
-// // // // //       {status === 'success' && (
-// // // // //         <div className="text-center space-y-6 max-w-md animate-in zoom-in duration-500">
-// // // // //           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto" />
-// // // // //           <h1 className="text-2xl font-bold text-white">{t('accptReq')} 🎉</h1>
-// // // // //           <Button className="w-full" onClick={() => router.push(`/${locale}/history`)}>
-// // // // //             {t('gotoReq')}
-// // // // //           </Button>
-// // // // //         </div>
-// // // // //       )}
-
-// // // // //       {status === 'error' && (
-// // // // //         <div className="text-center space-y-6 max-w-md animate-in shake duration-500">
-// // // // //           <XCircle className="h-20 w-20 text-red-500 mx-auto" />
-// // // // //           <h1 className="text-2xl font-bold">تنبيه سيادي</h1>
-// // // // //           <p className="text-muted-foreground">{tError(errorCode)}</p>
-// // // // //           <Button className="w-full" onClick={() => router.push(`/${locale}/dashboard`)}>
-// // // // //             العودة للرئيسية
-// // // // //           </Button>
-// // // // //         </div>
-// // // // //       )}
-
-// // // // //       {trip && isDialogOpen && (
-// // // // //         <BookingDialog
-// // // // //           isOpen={isDialogOpen}
-// // // // //           onOpenChange={(open) => {
-// // // // //             setIsDialogOpen(open);
-// // // // //             if (!open && status === 'ready') router.push(`/${locale}/dashboard`);
-// // // // //           }}
-// // // // //           trip={trip}
-// // // // //           seatCount={tokenData?.seatCount || 1}
-// // // // //           onSubmit={handleConfirmBooking}
-// // // // //           isProcessing={status === 'confirming'}
-// // // // //         />
-// // // // //       )}
-// // // // //     </div>
-// // // // //   );
-// // // // // }
 // // // // 'use client';
 
-// // // // import { useEffect, useState } from 'react';
+// // // // import { useEffect, useState, Suspense } from 'react';
 // // // // import { useSearchParams, useRouter } from 'next/navigation';
 // // // // import { useFirestore, useUser } from '@/firebase';
-// // // // import { doc, getDoc, collection, serverTimestamp, writeBatch, arrayUnion, increment, setDoc } from 'firebase/firestore';
+// // // // import { doc, getDoc, collection, serverTimestamp, writeBatch, arrayUnion, increment, setDoc, deleteField } from 'firebase/firestore';
 // // // // import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 // // // // import { Button } from '@/components/ui/button';
 // // // // import { BookingDialog } from '@/components/booking-dialog';
@@ -1308,6 +20,14 @@
 // // // // type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
 
 // // // // export default function ConfirmBookingPage() {
+// // // //   return (
+// // // //     <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+// // // //       <ConfirmBookingContent />
+// // // //     </Suspense>
+// // // //   );
+// // // // }
+
+// // // // function ConfirmBookingContent() {
 // // // //   const searchParams = useSearchParams();
 // // // //   const router = useRouter();
 // // // //   const firestore = useFirestore();
@@ -1396,6 +116,7 @@
 // // // //           passengersDetails: passengers,
 // // // //           seats: passengers.length,
 // // // //           depositPaid: true,
+// // // //           depositPercentage: trip.depositPercentage ?? 0,
 // // // //           verifiedEmail: tokenData.email || null,
 // // // //           status: 'Pending-Carrier-Confirmation',
 // // // //           updatedAt: serverTimestamp(),
@@ -1414,7 +135,9 @@
 // // // //         const userRef = doc(firestore, 'users', user.uid);
 // // // //         batch.set(userRef, {
 // // // //           activeBookingId: tokenData.bookingId,
-// // // //           activeIntentId: null,
+// // // //           // activeIntentId: null,
+// // // //           activeIntentId: deleteField(),
+
 // // // //           updatedAt: serverTimestamp(),
 // // // //         }, { merge: true });
 
@@ -1455,17 +178,20 @@
 // // // //         // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
 // // // //         // ══════════════════════════════════════════════════════════════════
 // // // //         const bookingRef = doc(collection(firestore, 'bookings'));
-// // // //         const notificationRef = trip.carrierId
-// // // //           ? doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'))
+
+// // // //         // [FIX]: نستخدم tokenData.carrierId لأن trip.carrierId اتمسح من handleAcceptOffer
+// // // //         // أو ممكن يكون في pendingCarrierId (من العرض)
+// // // //         const effectiveCarrierId = tokenData.carrierId || (trip as any).pendingCarrierId || trip.carrierId || null;
+// // // //         const notificationRef = effectiveCarrierId
+// // // //           ? doc(collection(doc(firestore, 'users', effectiveCarrierId), 'notifications'))
 // // // //           : null;
 
 // // // //         // ✅ التفرقة بين رحلة مجدولة وطلب خاص
 // // // //         // رحلة مجدولة = حالتها Planned أو Ongoing أو الناقل هو من أنشأها
-// // // //         const isScheduledTrip = trip.status === 'Planned' || trip.status === 'Ongoing' || (trip.userId === trip.carrierId);
+// // // //         const isScheduledTrip = trip.status === 'Planned' || trip.status === 'Ongoing' || (trip.userId === (trip.carrierId || effectiveCarrierId));
 
-// // // //         // لو رحلة مجدولة، الحجز يكون Pending-Carrier-Confirmation لكي يضغط الناقل "قبول" فقط
-// // // //         // لو طلب خاص، يكون Traveler-Accepted-Awaiting-Carrier ليضغط الناقل "قبول وإنشاء رحلة"
-// // // //         const newBookingStatus = isScheduledTrip ? 'Pending-Carrier-Confirmation' : 'Traveler-Accepted-Awaiting-Carrier';
+// // // //         // دايمًا Pending-Carrier-Confirmation — الناقل يقرر: يوافق فوراً لو عنده رحلة، وإلا ينشئ رحلة جديدة
+// // // //         const newBookingStatus = 'Pending-Carrier-Confirmation';
 
 // // // //         batch.set(bookingRef, {
 // // // //           id: bookingRef.id,
@@ -1478,6 +204,7 @@
 // // // //           status: newBookingStatus,
 // // // //           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
 // // // //           currency: tokenData.currency || trip.currency || 'JOD',
+// // // //           depositPercentage: trip.depositPercentage ?? 0,
 // // // //           verifiedEmail: tokenData.email || null,
 // // // //           bookedByAgent: false,
 // // // //           requestOrigin: trip.origin,
@@ -1500,11 +227,15 @@
 // // // //             updatedAt: serverTimestamp(),
 // // // //           });
 // // // //         } else {
-// // // //           // 2️⃣ إذا كان طلب مسافر (طلب خاص)، نقوم بتحديث حالته إلى "في انتظار الناقل"
+// // // //           // 2️⃣ إذا كان طلب مسافر (طلب خاص)، نحدّث حالته لـ Pending-Carrier-Confirmation
+// // // //           // [FIX]: نمسح carrierId و pendingCarrierId من رحلة المسافر — مش رحلة الناقل
+// // // //           // carrierId هيرجع يتحط لما الناقل ينشئ رحلته فعلاً (في handleTripCreated)
 // // // //           const tripUpdateRef = doc(firestore, 'trips', trip.id);
 // // // //           batch.update(tripUpdateRef, {
-// // // //             status: 'Traveler-Accepted-Awaiting-Carrier',
+// // // //             status: 'Pending-Carrier-Confirmation',
 // // // //             pendingBookingId: bookingRef.id,
+// // // //             carrierId: deleteField(),
+// // // //             pendingCarrierId: deleteField(),
 // // // //             updatedAt: serverTimestamp(),
 // // // //           });
 
@@ -1521,19 +252,20 @@
 // // // //         const userRef = doc(firestore, 'users', user.uid);
 // // // //         batch.set(userRef, {
 // // // //           activeBookingId: bookingRef.id,
-// // // //           activeIntentId: null,
+// // // //           // activeIntentId: null,
+// // // //           activeIntentId: deleteField(),
 // // // //           updatedAt: serverTimestamp(),
 // // // //         }, { merge: true });
 
 // // // //         // إشعارات مخصصة حسب نوع الرحلة
-// // // //         if (trip.carrierId && notificationRef) {
+// // // //         if (effectiveCarrierId && notificationRef) {
 // // // //           batch.set(notificationRef, {
-// // // //             userId: trip.carrierId,
-// // // //             title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق — في انتظار قبولك 🎉',
+// // // //             userId: effectiveCarrierId,
+// // // //             title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق على عرضك — في انتظار قبولك 🎉',
 // // // //             message: isScheduledTrip
 // // // //               ? `المسافر "${passengers[0]?.name || ''}" حجز ${passengers.length} مقعد في رحلتك المجدولة — يرجى تأكيد الحجز.`
-// // // //               : `المسافر "${passengers[0]?.name || ''}" وافق على عرضك — اضغط لقبول الحجز وإنشاء الرحلة.`,
-// // // //             type: isScheduledTrip ? 'new_booking_request' : 'traveler_accepted_offer',
+// // // //               : `المسافر "${passengers[0]?.name || ''}" وافق على عرضك — اضغط لقبول الحجز.`,
+// // // //             type: 'new_booking_request',
 // // // //             bookingId: bookingRef.id,
 // // // //             isRead: false,
 // // // //             link: `/${locale}/carrier/bookings`,
@@ -1543,14 +275,14 @@
 
 // // // //         await batch.commit();
 
-// // // //         if (trip.carrierId) {
+// // // //         if (effectiveCarrierId) {
 // // // //           await sendPush({
-// // // //             userId: trip.carrierId,
+// // // //             userId: effectiveCarrierId,
 // // // //             title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق على عرضك! 🎉',
 // // // //             body: isScheduledTrip
 // // // //               ? `المسافر "${passengers[0]?.name || 'مسافر'}" بانتظار تأكيد حجز ${passengers.length} مقعد`
-// // // //               : `${passengers[0]?.name || 'مسافر'} وافق — افتح التطبيق وأنشئ الرحلة`,
-// // // //             data: { type: isScheduledTrip ? 'new_booking_request' : 'traveler_accepted_offer' },
+// // // //               : `${passengers[0]?.name || 'مسافر'} وافق — افتح التطبيق لقبول الحجز`,
+// // // //             data: { type: 'new_booking_request' },
 // // // //           });
 // // // //         }
 
@@ -1621,616 +353,376 @@
 // // // //           seatCount={tokenData?.seatCount || 1}
 // // // //           onSubmit={handleConfirmBooking}
 // // // //           isProcessing={status === 'confirming'}
+// // // //           // ✅ [FIX]: تمرير أنواع الركاب من الطلب الأصلي للتعبئة التلقائية
+// // // //           passengerTypes={
+// // // //             // ✅ [FIX]: نمرر أنواع الركاب من الطلب الأصلي — child→minor لضمان التوافق مع RadioGroup
+// // // //             (trip.passengersDetails && trip.passengersDetails.length > 0)
+// // // //               ? trip.passengersDetails.map(p => {
+// // // //                 const t = p.type as string;
+// // // //                 return (t === 'child' ? 'minor' : t) as 'adult' | 'minor' | 'infant';
+// // // //               })
+// // // //               : undefined
+// // // //           }
 // // // //         />
 // // // //       )}
 // // // //     </div>
 // // // //   );
 // // // // }
 
-// // // "use client";
+// // // 'use client';
 
-// // // import { useState, useCallback } from "react";
-// // // import { useFirestore } from "@/firebase";
-// // // import { doc, serverTimestamp, collection, runTransaction, deleteField, getDoc, increment } from "firebase/firestore";
-// // // import { useToast } from "@/hooks/use-toast";
-// // // import { getErrorMessage } from "@/lib/error-dictionary";
-// // // import type { Trip, Offer, Booking, UserProfile } from "@/lib/data";
-// // // import { SovereignBlackBox } from "@/lib/sovereign-monitor";
+// // // import { useEffect, useState, Suspense } from 'react';
+// // // import { useSearchParams, useRouter } from 'next/navigation';
+// // // import { useFirestore, useUser } from '@/firebase';
+// // // import { doc, getDoc, collection, serverTimestamp, writeBatch, arrayUnion, increment, setDoc, deleteField } from 'firebase/firestore';
+// // // import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+// // // import { Button } from '@/components/ui/button';
+// // // import { BookingDialog } from '@/components/booking-dialog';
+// // // import type { Trip, PassengerDetails } from '@/lib/data';
+// // // import { useLocale, useTranslations } from 'next-intl';
 // // // import { sendPush } from "@/lib/send-push";
 
-// // // export function useHistoryOps(user: any) {
-// // //   const firestore = useFirestore();
-// // //   const { toast } = useToast();
+// // // /**
+// // //  * @file src/app/[locale]/confirm-booking/page.tsx
+// // //  * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V6.1)
+// // //  * [FIX]: تم الفصل الذكي بين حجز "الرحلات المجدولة" و "الطلبات الخاصة" لمنع اختفاء الرحلات
+// // //  */
 
-// // //   const [isProcessingOffer, setIsProcessingOffer] = useState(false);
-// // //   const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
-// // //   const [isCancelling, setIsCancelling] = useState(false);
+// // // type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
 
-// // //   const handleAcceptOffer = useCallback(
-// // //     async (trip: Trip, offer: Offer, onSuccess: (bookingId: string) => void) => {
-// // //       if (!firestore || !user) return;
-// // //       setIsProcessingOffer(true);
-// // //       try {
-// // //         // 1. جلب المحفظة المالية للناقل لحفظها في snapshot
-// // //         const carrierSnap = await getDoc(doc(firestore, "users", offer.carrierId));
-// // //         const carrierData = carrierSnap.data() as UserProfile;
-// // //         const walletSnapshot = carrierData?.paymentWallets || [];
-
-// // //         // ══════════════════════════════════════════════════════════════
-// // //         // [NEW FLOW]: المسافر وافق على العرض →
-// // //         //   - نحدّث طلب المسافر بـ status: Pending-Carrier-Confirmation
-// // //         //   - ننشئ booking بـ status: Pending-Carrier-Confirmation
-// // //         //   - نبعت إشعار للناقل إن المسافر وافق وفي انتظار قبوله
-// // //         //   - الناقل يدوس قبول: لو عنده رحلة يوافق فوراً، لو لأ ينشئ رحلة جديدة
-// // //         // ══════════════════════════════════════════════════════════════
-// // //         let newBookingId = "";
-// // //         await runTransaction(firestore, async (transaction) => {
-// // //           const tripRef = doc(firestore, "trips", trip.id);
-// // //           const offerRef = doc(firestore, "offers", offer.id);
-// // //           const bookingRef = doc(collection(firestore, "bookings"));
-// // //           newBookingId = bookingRef.id;
-
-// // //           // تحديث طلب المسافر الأصلي
-// // //           transaction.update(tripRef, {
-// // //             status: "Pending-Carrier-Confirmation",
-// // //             carrierId: offer.carrierId,
-// // //             carrierName: offer.carrierName || "",
-// // //             price: offer.price,
-// // //             currency: offer.currency,
-// // //             depositPercentage: offer.depositPercentage || 10,
-// // //             acceptedOfferId: offer.id,
-// // //             pendingBookingId: bookingRef.id,
-// // //             updatedAt: serverTimestamp(),
-// // //           });
-
-// // //           // تغيير الـ offer لـ Accepted
-// // //           transaction.update(offerRef, { status: "Accepted" });
-
-// // //           // إنشاء booking بحالة انتظار الناقل
-// // //           transaction.set(bookingRef, {
-// // //             id: bookingRef.id,
-// // //             tripId: trip.id,
-// // //             carrierTripId: null, // سيُعبأ بعد إنشاء الناقل للرحلة
-// // //             userId: user.uid,
-// // //             carrierId: offer.carrierId,
-// // //             seats: trip.passengers || 1,
-// // //             status: "Pending-Carrier-Confirmation",
-// // //             totalPrice: offer.price,
-// // //             currency: offer.currency || "JOD",
-// // //             passengersDetails: (trip as any).passengersDetails || [],
-// // //             paymentSnapshot: walletSnapshot,
-// // //             offerId: offer.id,
-// // //             // بيانات الطلب الأصلي للناقل عند إنشاء الرحلة
-// // //             requestOrigin: trip.origin,
-// // //             requestDestination: trip.destination,
-// // //             requestDepartureDate: trip.departureDate,
-// // //             requestPassengers: trip.passengers || 1,
-// // //             createdAt: serverTimestamp(),
-// // //             updatedAt: serverTimestamp(),
-// // //           });
-// // //         });
-
-// // //         // [PUSH + NOTIF]: إشعار للناقل إن المسافر وافق — في انتظاره
-// // //         const notifRef = doc(collection(doc(firestore, "users", offer.carrierId), "notifications"));
-// // //         await (
-// // //           await import("firebase/firestore")
-// // //         ).setDoc(notifRef, {
-// // //           userId: offer.carrierId,
-// // //           title: "المسافر وافق على عرضك! 🎉",
-// // //           message: `المسافر قبل عرضك بـ ${offer.price} ${offer.currency} — اضغط لقبول الرحلة وإنشائها`,
-// // //           type: "traveler_accepted_offer",
-// // //           bookingId: newBookingId,
-// // //           isRead: false,
-// // //           createdAt: (await import("firebase/firestore")).serverTimestamp(),
-// // //         });
-
-// // //         await sendPush({
-// // //           userId: offer.carrierId,
-// // //           title: "المسافر وافق على عرضك! 🎉",
-// // //           body: `عرضك بـ ${offer.price} ${offer.currency} تم قبوله — افتح التطبيق وأنشئ الرحلة`,
-// // //           data: { type: "traveler_accepted_offer", bookingId: newBookingId },
-// // //         });
-
-// // //         toast({ title: "تم قبول العرض! ✅", description: "في انتظار موافقة الناقل وإنشاء الرحلة." });
-// // //         onSuccess(newBookingId);
-// // //       } catch (error: any) {
-// // //         SovereignBlackBox.reportLethalCrash(error, "ACCEPT_OFFER_RUPTURE", { tripId: trip.id, offerId: offer.id });
-// // //         toast({ variant: "destructive", title: getErrorMessage(error, "فشل قبول العرض السيادي") });
-// // //       } finally {
-// // //         setIsProcessingOffer(false);
-// // //       }
-// // //     },
-// // //     [firestore, user, toast],
+// // // export default function ConfirmBookingPage() {
+// // //   return (
+// // //     <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+// // //       <ConfirmBookingContent />
+// // //     </Suspense>
 // // //   );
-
-// // //   const handleConfirmPayment = useCallback(
-// // //     async (booking: Booking, onSuccess: () => void) => {
-// // //       if (!firestore) return;
-// // //       setIsConfirmingPayment(true);
-// // //       try {
-// // //         const voucherId = `PAY-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-// // //         const bookingRef = doc(firestore, "bookings", booking.id);
-// // //         const notificationRef = doc(collection(firestore, "notifications"));
-
-// // //         await runTransaction(firestore, async (transaction) => {
-// // //           transaction.update(bookingRef, {
-// // //             status: "Pending-Payment-Verification",
-// // //             depositVoucherId: voucherId,
-// // //             paymentDeclaredAt: serverTimestamp(),
-// // //             updatedAt: serverTimestamp(),
-// // //           });
-
-// // //           transaction.set(notificationRef, {
-// // //             userId: booking.carrierId,
-// // //             title: "المسافر أكد الدفع — راجع السند ✅",
-// // //             message: `المسافر أرسل إشعار الدفع — رقم السند: ${voucherId} — اضغط لتأكيد الاستلام`,
-// // //             type: "payment_declared",
-// // //             bookingId: booking.id,
-// // //             isRead: false,
-// // //             createdAt: serverTimestamp(),
-// // //           });
-// // //         });
-
-// // //         // [PUSH]: إشعار Push للناقل إن المسافر دفع
-// // //         await sendPush({
-// // //           userId: booking.carrierId,
-// // //           title: "المسافر أكد الدفع! 💳",
-// // //           body: `المسافر أرسل إشعار دفع العربون — راجع السند وأكد الاستلام`,
-// // //           data: { type: "payment_declared", bookingId: booking.id },
-// // //         });
-// // //         toast({ title: "تم تأكيد الدفع! 💳", description: "سيتم إعلام الناقل بتأكيد دفع العربون." });
-// // //         onSuccess();
-// // //       } catch (error: any) {
-// // //         SovereignBlackBox.reportLethalCrash(error, "PAYMENT_CONFIRMATION_RUPTURE", { bookingId: booking.id });
-// // //         toast({ variant: "destructive", title: getErrorMessage(error, "فشل تأكيد النبض المالي") });
-// // //       } finally {
-// // //         setIsConfirmingPayment(false);
-// // //       }
-// // //     },
-// // //     [firestore, toast],
-// // //   );
-
-// // //   const handleConfirmCancellation = useCallback(
-// // //     async (booking: Booking, reason: string, onSuccess: () => void) => {
-// // //       if (!firestore || !user) return;
-// // //       setIsCancelling(true);
-// // //       try {
-// // //         const bookingRef = doc(firestore, "bookings", booking.id);
-// // //         const userRef = doc(firestore, "users", user.uid);
-
-// // //         await runTransaction(firestore, async (transaction) => {
-// // //           transaction.update(bookingRef, {
-// // //             status: "Cancelled",
-// // //             cancelReason: reason,
-// // //             cancelledBy: "traveler",
-// // //             cancelledAt: serverTimestamp(),
-// // //             updatedAt: serverTimestamp(),
-// // //           });
-
-// // //           if (["Confirmed", "Pending-Payment", "Pending-Payment-Verification"].includes(booking.status)) {
-// // //             const seatsToRestore = booking.seats || 1;
-// // //             if (booking.carrierTripId) {
-// // //               transaction.update(doc(firestore, "trips", booking.carrierTripId), {
-// // //                 availableSeats: increment(seatsToRestore),
-// // //                 updatedAt: serverTimestamp(),
-// // //               });
-// // //             }
-// // //             if (booking.tripId) {
-// // //               transaction.update(doc(firestore, "trips", booking.tripId), {
-// // //                 availableSeats: increment(seatsToRestore),
-// // //                 updatedAt: serverTimestamp(),
-// // //               });
-// // //             }
-// // //           }
-
-// // //           transaction.update(userRef, {
-// // //             activeBookingId: deleteField(),
-// // //             activeIntentId: deleteField(),
-// // //             updatedAt: serverTimestamp(),
-// // //           });
-// // //         });
-
-// // //         // [PUSH]: إشعار للناقل إن المسافر ألغى
-// // //         if (booking.carrierId) {
-// // //           await sendPush({
-// // //             userId: booking.carrierId,
-// // //             title: "المسافر ألغى الحجز ❌",
-// // //             body: `تم إلغاء حجز ${booking.seats} مقعد — السبب: ${reason}`,
-// // //             data: { type: "traveler_cancelled_booking", bookingId: booking.id },
-// // //           });
-// // //         }
-// // //         toast({ title: "تم إلغاء الحجز بنجاح ✅" });
-// // //         onSuccess();
-// // //       } catch (error: any) {
-// // //         SovereignBlackBox.reportLethalCrash(error, "CANCELLATION_RUPTURE", { bookingId: booking.id });
-// // //         toast({ variant: "destructive", title: getErrorMessage(error, "فشل إلغاء الحجز الموثق") });
-// // //       } finally {
-// // //         setIsCancelling(false);
-// // //       }
-// // //     },
-// // //     [firestore, user, toast],
-// // //   );
-
-// // //   const handleWithdrawRequest = useCallback(
-// // //     async (tripId: string) => {
-// // //       if (!firestore || !user) return;
-// // //       try {
-// // //         const { updateDoc } = await import("firebase/firestore");
-// // //         await updateDoc(doc(firestore, "trips", tripId), {
-// // //           status: "Cancelled",
-// // //           updatedAt: serverTimestamp(),
-// // //         });
-// // //         await updateDoc(doc(firestore, "users", user.uid), {
-// // //           activeIntentId: deleteField(),
-// // //           updatedAt: serverTimestamp(),
-// // //         });
-// // //         toast({ title: "تم سحب الطلب بنجاح" });
-// // //       } catch (error: any) {
-// // //         SovereignBlackBox.reportLethalCrash(error, "WITHDRAW_REQUEST_RUPTURE", { tripId });
-// // //         toast({ variant: "destructive", title: getErrorMessage(error, "فشل سحب الطلب من السوق") });
-// // //       }
-// // //     },
-// // //     [firestore, user, toast],
-// // //   );
-
-// // //   return {
-// // //     isProcessingOffer,
-// // //     isConfirmingPayment,
-// // //     isCancelling,
-// // //     handleAcceptOffer,
-// // //     handleConfirmPayment,
-// // //     handleConfirmCancellation,
-// // //     handleWithdrawRequest,
-// // //   };
 // // // }
 
-// // 'use client';
+// // // function ConfirmBookingContent() {
+// // //   const searchParams = useSearchParams();
+// // //   const router = useRouter();
+// // //   const firestore = useFirestore();
+// // //   const { user } = useUser();
+// // //   const locale = useLocale();
+// // //   const tError = useTranslations('errorDictionary');
+// // //   const t = useTranslations('ConfirmBooking');
+// // //   const token = searchParams.get('token');
 
-// // import { useEffect, useState, Suspense } from 'react';
-// // import { useSearchParams, useRouter } from 'next/navigation';
-// // import { useFirestore, useUser } from '@/firebase';
-// // import { doc, getDoc, collection, serverTimestamp, writeBatch, arrayUnion, increment, setDoc } from 'firebase/firestore';
-// // import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
-// // import { Button } from '@/components/ui/button';
-// // import { BookingDialog } from '@/components/booking-dialog';
-// // import type { Trip, PassengerDetails } from '@/lib/data';
-// // import { useLocale, useTranslations } from 'next-intl';
-// // import { sendPush } from "@/lib/send-push";
+// // //   const [status, setStatus] = useState<Status>('loading');
+// // //   const [tokenData, setTokenData] = useState<any>(null);
+// // //   const [trip, setTrip] = useState<Trip | null>(null);
+// // //   const [isDialogOpen, setIsDialogOpen] = useState(false);
+// // //   const [errorCode, setErrorCode] = useState('DEFAULT');
 
-// // /**
-// //  * @file src/app/[locale]/confirm-booking/page.tsx
-// //  * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V6.1)
-// //  * [FIX]: تم الفصل الذكي بين حجز "الرحلات المجدولة" و "الطلبات الخاصة" لمنع اختفاء الرحلات
-// //  */
+// // //   useEffect(() => {
+// // //     if (!token || !firestore) return;
 
-// // type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
+// // //     const verifyToken = async () => {
+// // //       try {
+// // //         const tokenRef = doc(firestore, 'booking_tokens', token);
+// // //         const tokenSnap = await getDoc(tokenRef);
 
-// // export default function ConfirmBookingPage() {
-// //   return (
-// //     <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
-// //       <ConfirmBookingContent />
-// //     </Suspense>
-// //   );
-// // }
+// // //         if (!tokenSnap.exists()) {
+// // //           setStatus('error');
+// // //           setErrorCode('TOKEN_INVALID');
+// // //           return;
+// // //         }
 
-// // function ConfirmBookingContent() {
-// //   const searchParams = useSearchParams();
-// //   const router = useRouter();
-// //   const firestore = useFirestore();
-// //   const { user } = useUser();
-// //   const locale = useLocale();
-// //   const tError = useTranslations('errorDictionary');
-// //   const t = useTranslations('ConfirmBooking');
-// //   const token = searchParams.get('token');
+// // //         const data = tokenSnap.data();
 
-// //   const [status, setStatus] = useState<Status>('loading');
-// //   const [tokenData, setTokenData] = useState<any>(null);
-// //   const [trip, setTrip] = useState<Trip | null>(null);
-// //   const [isDialogOpen, setIsDialogOpen] = useState(false);
-// //   const [errorCode, setErrorCode] = useState('DEFAULT');
+// // //         if (data.status === 'used') {
+// // //           setStatus('error');
+// // //           setErrorCode('TOKEN_USED');
+// // //           return;
+// // //         }
 
-// //   useEffect(() => {
-// //     if (!token || !firestore) return;
+// // //         const expiresAt = data.expiresAt?.toDate?.() || new Date(data.expiresAt);
+// // //         if (new Date() > expiresAt) {
+// // //           setStatus('error');
+// // //           setErrorCode('TOKEN_EXPIRED');
+// // //           return;
+// // //         }
 
-// //     const verifyToken = async () => {
-// //       try {
-// //         const tokenRef = doc(firestore, 'booking_tokens', token);
-// //         const tokenSnap = await getDoc(tokenRef);
+// // //         const tripRef = doc(firestore, 'trips', data.tripId);
+// // //         const tripSnap = await getDoc(tripRef);
 
-// //         if (!tokenSnap.exists()) {
-// //           setStatus('error');
-// //           setErrorCode('TOKEN_INVALID');
-// //           return;
-// //         }
+// // //         if (!tripSnap.exists()) {
+// // //           setStatus('error');
+// // //           setErrorCode('TRIP_NOT_FOUND');
+// // //           return;
+// // //         }
 
-// //         const data = tokenSnap.data();
+// // //         setTokenData(data);
+// // //         setTrip({ id: tripSnap.id, ...tripSnap.data() } as Trip);
+// // //         setStatus('ready');
+// // //         setIsDialogOpen(true);
+// // //       } catch (err) {
+// // //         console.error('[VerifyToken Error]', err);
+// // //         setStatus('error');
+// // //         setErrorCode('VERIFICATION_FAILED');
+// // //       }
+// // //     };
 
-// //         if (data.status === 'used') {
-// //           setStatus('error');
-// //           setErrorCode('TOKEN_USED');
-// //           return;
-// //         }
+// // //     verifyToken();
+// // //   }, [token, firestore]);
 
-// //         const expiresAt = data.expiresAt?.toDate?.() || new Date(data.expiresAt);
-// //         if (new Date() > expiresAt) {
-// //           setStatus('error');
-// //           setErrorCode('TOKEN_EXPIRED');
-// //           return;
-// //         }
+// // //   const handleConfirmBooking = async (passengers: PassengerDetails[]) => {
+// // //     if (!firestore || !tokenData || !trip || !token) throw new Error('MISSING_DATA');
+// // //     if (!user?.uid) throw new Error('AUTH_REQUIRED');
 
-// //         const tripRef = doc(firestore, 'trips', data.tripId);
-// //         const tripSnap = await getDoc(tripRef);
+// // //     setStatus('confirming');
 
-// //         if (!tripSnap.exists()) {
-// //           setStatus('error');
-// //           setErrorCode('TRIP_NOT_FOUND');
-// //           return;
-// //         }
+// // //     try {
+// // //       const batch = writeBatch(firestore);
+// // //       const tokenRef = doc(firestore, 'booking_tokens', token);
 
-// //         setTokenData(data);
-// //         setTrip({ id: tripSnap.id, ...tripSnap.data() } as Trip);
-// //         setStatus('ready');
-// //         setIsDialogOpen(true);
-// //       } catch (err) {
-// //         console.error('[VerifyToken Error]', err);
-// //         setStatus('error');
-// //         setErrorCode('VERIFICATION_FAILED');
-// //       }
-// //     };
+// // //       if (tokenData.bookingId) {
+// // //         // ══════════════════════════════════════════════════════════════════
+// // //         // المسار الجاي من وكيل
+// // //         // ══════════════════════════════════════════════════════════════════
+// // //         const existingBookingRef = doc(firestore, 'bookings', tokenData.bookingId);
 
-// //     verifyToken();
-// //   }, [token, firestore]);
+// // //         batch.update(existingBookingRef, {
+// // //           userId: user.uid,
+// // //           passengersDetails: passengers,
+// // //           seats: passengers.length,
+// // //           depositPaid: true,
+// // //           depositPercentage: trip.depositPercentage ?? 0,
+// // //           verifiedEmail: tokenData.email || null,
+// // //           status: 'Pending-Carrier-Confirmation',
+// // //           updatedAt: serverTimestamp(),
+// // //         });
 
-// //   const handleConfirmBooking = async (passengers: PassengerDetails[]) => {
-// //     if (!firestore || !tokenData || !trip || !token) throw new Error('MISSING_DATA');
-// //     if (!user?.uid) throw new Error('AUTH_REQUIRED');
+// // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
 
-// //     setStatus('confirming');
+// // //         if (tokenData.carrierTripId) {
+// // //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
+// // //           batch.update(carrierTripRef, {
+// // //             bookingIds: arrayUnion(tokenData.bookingId),
+// // //             updatedAt: serverTimestamp(),
+// // //           });
+// // //         }
 
-// //     try {
-// //       const batch = writeBatch(firestore);
-// //       const tokenRef = doc(firestore, 'booking_tokens', token);
+// // //         const userRef = doc(firestore, 'users', user.uid);
+// // //         batch.set(userRef, {
+// // //           activeBookingId: tokenData.bookingId,
+// // //           // activeIntentId: null,
+// // //           activeIntentId: deleteField(),
 
-// //       if (tokenData.bookingId) {
-// //         // ══════════════════════════════════════════════════════════════════
-// //         // المسار الجاي من وكيل
-// //         // ══════════════════════════════════════════════════════════════════
-// //         const existingBookingRef = doc(firestore, 'bookings', tokenData.bookingId);
+// // //           updatedAt: serverTimestamp(),
+// // //         }, { merge: true });
 
-// //         batch.update(existingBookingRef, {
-// //           userId: user.uid,
-// //           passengersDetails: passengers,
-// //           seats: passengers.length,
-// //           depositPaid: true,
-// //           verifiedEmail: tokenData.email || null,
-// //           status: 'Pending-Carrier-Confirmation',
-// //           updatedAt: serverTimestamp(),
-// //         });
+// // //         if (trip.carrierId) {
+// // //           const notifRef = doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'));
+// // //           batch.set(notifRef, {
+// // //             userId: trip.carrierId,
+// // //             title: 'مسافر أكمّل بيانات الحجز ✅',
+// // //             message: `المسافر "${passengers[0]?.name || ''}" أكمل بياناته ودفع العربون — ${passengers.length} مقعد`,
+// // //             type: 'passenger_deposit_paid',
+// // //             bookingId: tokenData.bookingId,
+// // //             isRead: false,
+// // //             link: `/${locale}/carrier/bookings`,
+// // //             createdAt: serverTimestamp(),
+// // //           });
+// // //         }
 
-// //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
+// // //         await batch.commit();
 
-// //         if (tokenData.carrierTripId) {
-// //           const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// //           batch.update(carrierTripRef, {
-// //             bookingIds: arrayUnion(tokenData.bookingId),
-// //             updatedAt: serverTimestamp(),
-// //           });
-// //         }
+// // //         if (trip.carrierId) {
+// // //           await sendPush({
+// // //             userId: trip.carrierId,
+// // //             title: 'مسافر أكمّل بيانات الحجز ✅',
+// // //             body: `${passengers[0]?.name || 'مسافر'} دفع العربون — ${passengers.length} مقعد`,
+// // //             data: { type: 'passenger_deposit_paid', bookingId: tokenData.bookingId },
+// // //           });
+// // //         }
 
-// //         const userRef = doc(firestore, 'users', user.uid);
-// //         batch.set(userRef, {
-// //           activeBookingId: tokenData.bookingId,
-// //           activeIntentId: null,
-// //           updatedAt: serverTimestamp(),
-// //         }, { merge: true });
+// // //         try {
+// // //           const groupChatRef = doc(firestore, 'chats', trip.id);
+// // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
+// // //         } catch (e) {
+// // //           console.warn('[GroupChat] Could not join:', e);
+// // //         }
 
-// //         if (trip.carrierId) {
-// //           const notifRef = doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'));
-// //           batch.set(notifRef, {
-// //             userId: trip.carrierId,
-// //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// //             message: `المسافر "${passengers[0]?.name || ''}" أكمل بياناته ودفع العربون — ${passengers.length} مقعد`,
-// //             type: 'passenger_deposit_paid',
-// //             bookingId: tokenData.bookingId,
-// //             isRead: false,
-// //             link: `/${locale}/carrier/bookings`,
-// //             createdAt: serverTimestamp(),
-// //           });
-// //         }
+// // //       } else {
+// // //         // ══════════════════════════════════════════════════════════════════
+// // //         // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
+// // //         // ══════════════════════════════════════════════════════════════════
+// // //         const bookingRef = doc(collection(firestore, 'bookings'));
 
-// //         await batch.commit();
+// // //         const effectiveCarrierId = tokenData.carrierId || (trip as any).pendingCarrierId || trip.carrierId || null;
+// // //         const notificationRef = effectiveCarrierId
+// // //           ? doc(collection(doc(firestore, 'users', effectiveCarrierId), 'notifications'))
+// // //           : null;
 
-// //         if (trip.carrierId) {
-// //           await sendPush({
-// //             userId: trip.carrierId,
-// //             title: 'مسافر أكمّل بيانات الحجز ✅',
-// //             body: `${passengers[0]?.name || 'مسافر'} دفع العربون — ${passengers.length} مقعد`,
-// //             data: { type: 'passenger_deposit_paid', bookingId: tokenData.bookingId },
-// //           });
-// //         }
+// // //         // ✅ [FIX]: carrierTripId من الـ token (اللي يجي من رحلة الناقل الحقيقية)
+// // //         // لو مفيش carrierTripId في الـ token → رحلة المسافر هي الأصل (طلب بدون ناقل بعد)
+// // //         const effectiveCarrierTripId = tokenData.carrierTripId || null;
+// // //         const isScheduledTrip = !!effectiveCarrierTripId ||
+// // //           trip.status === 'Planned' || trip.status === 'Ongoing';
 
-// //         try {
-// //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// //         } catch (e) {
-// //           console.warn('[GroupChat] Could not join:', e);
-// //         }
+// // //         const newBookingStatus = 'Pending-Carrier-Confirmation';
 
-// //       } else {
-// //         // ══════════════════════════════════════════════════════════════════
-// //         // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
-// //         // ══════════════════════════════════════════════════════════════════
-// //         const bookingRef = doc(collection(firestore, 'bookings'));
-// //         const notificationRef = trip.carrierId
-// //           ? doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'))
-// //           : null;
+// // //         batch.set(bookingRef, {
+// // //           id: bookingRef.id,
+// // //           tripId: trip.id,                                           // رحلة المسافر (الطلب الأصلي)
+// // //           carrierTripId: effectiveCarrierTripId,                     // ✅ [FIX]: رحلة الناقل الحقيقية
+// // //           userId: user.uid,
+// // //           carrierId: effectiveCarrierId,
+// // //           seats: passengers.length,
+// // //           passengersDetails: passengers,
+// // //           status: newBookingStatus,
+// // //           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
+// // //           currency: tokenData.currency || trip.currency || 'JOD',
+// // //           depositPercentage: trip.depositPercentage ?? 0,
+// // //           verifiedEmail: tokenData.email || null,
+// // //           bookedByAgent: false,
+// // //           requestOrigin: trip.origin,
+// // //           requestDestination: trip.destination,
+// // //           requestDepartureDate: trip.departureDate,
+// // //           requestPassengers: passengers.length,
+// // //           createdAt: serverTimestamp(),
+// // //           updatedAt: serverTimestamp(),
+// // //         });
 
-// //         // ✅ التفرقة بين رحلة مجدولة وطلب خاص
-// //         // رحلة مجدولة = حالتها Planned أو Ongoing أو الناقل هو من أنشأها
-// //         const isScheduledTrip = trip.status === 'Planned' || trip.status === 'Ongoing' || (trip.userId === trip.carrierId);
+// // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
 
-// //         // دايمًا Pending-Carrier-Confirmation — الناقل يقرر: يوافق فوراً لو عنده رحلة، وإلا ينشئ رحلة جديدة
-// //         const newBookingStatus = 'Pending-Carrier-Confirmation';
+// // //         // ✅ [FIX]: دايماً حدّث رحلة المسافر بـ pendingBookingId
+// // //         batch.update(doc(firestore, 'trips', trip.id), {
+// // //           status: 'Pending-Carrier-Confirmation',
+// // //           pendingBookingId: bookingRef.id,
+// // //           carrierId: deleteField(),
+// // //           pendingCarrierId: deleteField(),
+// // //           updatedAt: serverTimestamp(),
+// // //         });
 
-// //         batch.set(bookingRef, {
-// //           id: bookingRef.id,
-// //           tripId: trip.id,
-// //           carrierTripId: isScheduledTrip ? trip.id : (tokenData.carrierTripId || null),
-// //           userId: user.uid,
-// //           carrierId: trip.carrierId || tokenData.carrierId,
-// //           seats: passengers.length,
-// //           passengersDetails: passengers,
-// //           status: newBookingStatus,
-// //           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
-// //           currency: tokenData.currency || trip.currency || 'JOD',
-// //           verifiedEmail: tokenData.email || null,
-// //           bookedByAgent: false,
-// //           requestOrigin: trip.origin,
-// //           requestDestination: trip.destination,
-// //           requestDepartureDate: trip.departureDate,
-// //           requestPassengers: passengers.length,
-// //           createdAt: serverTimestamp(),
-// //           updatedAt: serverTimestamp(),
-// //         });
+// // //         // ✅ [FIX]: لو في carrierTripId → أضف الـ booking لرحلة الناقل الحقيقية وخصم المقاعد
+// // //         if (effectiveCarrierTripId) {
+// // //           batch.update(doc(firestore, 'trips', effectiveCarrierTripId), {
+// // //             bookingIds: arrayUnion(bookingRef.id),   // ✅ يظهر عند الناقل
+// // //             updatedAt: serverTimestamp(),
+// // //           });
+// // //         }
 
-// //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
+// // //         const userRef = doc(firestore, 'users', user.uid);
+// // //         batch.set(userRef, {
+// // //           activeBookingId: bookingRef.id,
+// // //           // activeIntentId: null,
+// // //           activeIntentId: deleteField(),
+// // //           updatedAt: serverTimestamp(),
+// // //         }, { merge: true });
 
-// //         // ✅ [FIX]: التحديث حسب نوع الرحلة
-// //         if (isScheduledTrip) {
-// //           // 1️⃣ إذا كانت رحلة مجدولة، لا نغير حالتها أبداً (تظل Planned)
-// //           // نضيف فقط معرف الحجز إليها لكي تظهر للناقل
-// //           const tripUpdateRef = doc(firestore, 'trips', trip.id);
-// //           batch.update(tripUpdateRef, {
-// //             bookingIds: arrayUnion(bookingRef.id),
-// //             updatedAt: serverTimestamp(),
-// //           });
-// //         } else {
-// //           // 2️⃣ إذا كان طلب مسافر (طلب خاص)، نحدّث حالته لـ Pending-Carrier-Confirmation
-// //           const tripUpdateRef = doc(firestore, 'trips', trip.id);
-// //           batch.update(tripUpdateRef, {
-// //             status: 'Pending-Carrier-Confirmation',
-// //             pendingBookingId: bookingRef.id,
-// //             updatedAt: serverTimestamp(),
-// //           });
+// // //         // إشعارات مخصصة حسب نوع الرحلة
+// // //         if (effectiveCarrierId && notificationRef) {
+// // //           batch.set(notificationRef, {
+// // //             userId: effectiveCarrierId,
+// // //             title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق على عرضك — في انتظار قبولك 🎉',
+// // //             message: isScheduledTrip
+// // //               ? `المسافر "${passengers[0]?.name || ''}" حجز ${passengers.length} مقعد في رحلتك المجدولة — يرجى تأكيد الحجز.`
+// // //               : `المسافر "${passengers[0]?.name || ''}" وافق على عرضك — اضغط لقبول الحجز.`,
+// // //             type: 'new_booking_request',
+// // //             bookingId: bookingRef.id,
+// // //             isRead: false,
+// // //             link: `/${locale}/carrier/bookings`,
+// // //             createdAt: serverTimestamp(),
+// // //           });
+// // //         }
 
-// //           // لو الناقل كان رابط عرضه برحلة مجدولة عنده مسبقاً، نضيف الحجز ليها
-// //           if (tokenData.carrierTripId) {
-// //             const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// //             batch.update(carrierTripRef, {
-// //               bookingIds: arrayUnion(bookingRef.id),
-// //               updatedAt: serverTimestamp(),
-// //             });
-// //           }
-// //         }
+// // //         await batch.commit();
 
-// //         const userRef = doc(firestore, 'users', user.uid);
-// //         batch.set(userRef, {
-// //           activeBookingId: bookingRef.id,
-// //           activeIntentId: null,
-// //           updatedAt: serverTimestamp(),
-// //         }, { merge: true });
+// // //         if (effectiveCarrierId) {
+// // //           await sendPush({
+// // //             userId: effectiveCarrierId,
+// // //             title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق على عرضك! 🎉',
+// // //             body: isScheduledTrip
+// // //               ? `المسافر "${passengers[0]?.name || 'مسافر'}" بانتظار تأكيد حجز ${passengers.length} مقعد`
+// // //               : `${passengers[0]?.name || 'مسافر'} وافق — افتح التطبيق لقبول الحجز`,
+// // //             data: { type: 'new_booking_request' },
+// // //           });
+// // //         }
 
-// //         // إشعارات مخصصة حسب نوع الرحلة
-// //         if (trip.carrierId && notificationRef) {
-// //           batch.set(notificationRef, {
-// //             userId: trip.carrierId,
-// //             title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق على عرضك — في انتظار قبولك 🎉',
-// //             message: isScheduledTrip
-// //               ? `المسافر "${passengers[0]?.name || ''}" حجز ${passengers.length} مقعد في رحلتك المجدولة — يرجى تأكيد الحجز.`
-// //               : `المسافر "${passengers[0]?.name || ''}" وافق على عرضك — اضغط لقبول الحجز.`,
-// //             type: 'new_booking_request',
-// //             bookingId: bookingRef.id,
-// //             isRead: false,
-// //             link: `/${locale}/carrier/bookings`,
-// //             createdAt: serverTimestamp(),
-// //           });
-// //         }
+// // //         try {
+// // //           const groupChatRef = doc(firestore, 'chats', trip.id);
+// // //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
+// // //         } catch (e) {
+// // //           console.warn('[GroupChat] Could not join:', e);
+// // //         }
+// // //       }
 
-// //         await batch.commit();
+// // //       setIsDialogOpen(false);
+// // //       setStatus('success');
 
-// //         if (trip.carrierId) {
-// //           await sendPush({
-// //             userId: trip.carrierId,
-// //             title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق على عرضك! 🎉',
-// //             body: isScheduledTrip
-// //               ? `المسافر "${passengers[0]?.name || 'مسافر'}" بانتظار تأكيد حجز ${passengers.length} مقعد`
-// //               : `${passengers[0]?.name || 'مسافر'} وافق — افتح التطبيق لقبول الحجز`,
-// //             data: { type: 'new_booking_request' },
-// //           });
-// //         }
+// // //     } catch (err) {
+// // //       console.error('[ConfirmBooking Error]', err);
+// // //       setStatus('error');
+// // //       setErrorCode('OPERATION_FAILED');
+// // //       throw err;
+// // //     }
+// // //   };
 
-// //         try {
-// //           const groupChatRef = doc(firestore, 'chats', trip.id);
-// //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-// //         } catch (e) {
-// //           console.warn('[GroupChat] Could not join:', e);
-// //         }
-// //       }
+// // //   return (
+// // //     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background" dir="rtl">
+// // //       {status === 'loading' && (
+// // //         <div className="text-center space-y-4">
+// // //           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+// // //           <p className="text-muted-foreground">جاري فحص الختم الرقمي...</p>
+// // //         </div>
+// // //       )}
 
-// //       setIsDialogOpen(false);
-// //       setStatus('success');
+// // //       {(status === 'ready' || status === 'confirming') && trip && (
+// // //         <div className="text-center space-y-4">
+// // //           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+// // //           <p className="text-muted-foreground">جاري استرجاع بيانات الرحلة...</p>
+// // //         </div>
+// // //       )}
 
-// //     } catch (err) {
-// //       console.error('[ConfirmBooking Error]', err);
-// //       setStatus('error');
-// //       setErrorCode('OPERATION_FAILED');
-// //       throw err;
-// //     }
-// //   };
+// // //       {status === 'success' && (
+// // //         <div className="text-center space-y-6 max-w-md animate-in zoom-in duration-500">
+// // //           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto" />
+// // //           <h1 className="text-2xl font-bold text-white">{t('accptReq')} 🎉</h1>
+// // //           <Button className="w-full" onClick={() => router.push(`/${locale}/history`)}>
+// // //             {t('gotoReq')}
+// // //           </Button>
+// // //         </div>
+// // //       )}
 
-// //   return (
-// //     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background" dir="rtl">
-// //       {status === 'loading' && (
-// //         <div className="text-center space-y-4">
-// //           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
-// //           <p className="text-muted-foreground">جاري فحص الختم الرقمي...</p>
-// //         </div>
-// //       )}
+// // //       {status === 'error' && (
+// // //         <div className="text-center space-y-6 max-w-md animate-in shake duration-500">
+// // //           <XCircle className="h-20 w-20 text-red-500 mx-auto" />
+// // //           <h1 className="text-2xl font-bold">تنبيه سيادي</h1>
+// // //           <p className="text-muted-foreground">{tError(errorCode)}</p>
+// // //           <Button className="w-full" onClick={() => router.push(`/${locale}/dashboard`)}>
+// // //             العودة للرئيسية
+// // //           </Button>
+// // //         </div>
+// // //       )}
 
-// //       {(status === 'ready' || status === 'confirming') && trip && (
-// //         <div className="text-center space-y-4">
-// //           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-// //           <p className="text-muted-foreground">جاري استرجاع بيانات الرحلة...</p>
-// //         </div>
-// //       )}
-
-// //       {status === 'success' && (
-// //         <div className="text-center space-y-6 max-w-md animate-in zoom-in duration-500">
-// //           <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto" />
-// //           <h1 className="text-2xl font-bold text-white">{t('accptReq')} 🎉</h1>
-// //           <Button className="w-full" onClick={() => router.push(`/${locale}/history`)}>
-// //             {t('gotoReq')}
-// //           </Button>
-// //         </div>
-// //       )}
-
-// //       {status === 'error' && (
-// //         <div className="text-center space-y-6 max-w-md animate-in shake duration-500">
-// //           <XCircle className="h-20 w-20 text-red-500 mx-auto" />
-// //           <h1 className="text-2xl font-bold">تنبيه سيادي</h1>
-// //           <p className="text-muted-foreground">{tError(errorCode)}</p>
-// //           <Button className="w-full" onClick={() => router.push(`/${locale}/dashboard`)}>
-// //             العودة للرئيسية
-// //           </Button>
-// //         </div>
-// //       )}
-
-// //       {trip && isDialogOpen && (
-// //         <BookingDialog
-// //           isOpen={isDialogOpen}
-// //           onOpenChange={(open) => {
-// //             setIsDialogOpen(open);
-// //             if (!open && status === 'ready') router.push(`/${locale}/dashboard`);
-// //           }}
-// //           trip={trip}
-// //           seatCount={tokenData?.seatCount || 1}
-// //           onSubmit={handleConfirmBooking}
-// //           isProcessing={status === 'confirming'}
-// //         />
-// //       )}
-// //     </div>
-// //   );
-// // }
+// // //       {trip && isDialogOpen && (
+// // //         <BookingDialog
+// // //           isOpen={isDialogOpen}
+// // //           onOpenChange={(open) => {
+// // //             setIsDialogOpen(open);
+// // //             if (!open && status === 'ready') router.push(`/${locale}/dashboard`);
+// // //           }}
+// // //           trip={trip}
+// // //           seatCount={tokenData?.seatCount || 1}
+// // //           onSubmit={handleConfirmBooking}
+// // //           isProcessing={status === 'confirming'}
+// // //           // ✅ [FIX]: تمرير أنواع الركاب من الطلب الأصلي للتعبئة التلقائية
+// // //           passengerTypes={
+// // //             // ✅ [FIX]: نمرر أنواع الركاب من الطلب الأصلي — child→minor لضمان التوافق مع RadioGroup
+// // //             (trip.passengersDetails && trip.passengersDetails.length > 0)
+// // //               ? trip.passengersDetails.map(p => {
+// // //                 const t = p.type as string;
+// // //                 return (t === 'child' ? 'minor' : t) as 'adult' | 'minor' | 'infant';
+// // //               })
+// // //               : undefined
+// // //           }
+// // //         />
+// // //       )}
+// // //     </div>
+// // //   );
+// // // }
 
 // // 'use client';
 
@@ -2350,6 +842,7 @@
 // //           passengersDetails: passengers,
 // //           seats: passengers.length,
 // //           depositPaid: true,
+// //           depositPercentage: trip.depositPercentage ?? 0,
 // //           verifiedEmail: tokenData.email || null,
 // //           status: 'Pending-Carrier-Confirmation',
 // //           updatedAt: serverTimestamp(),
@@ -2412,31 +905,31 @@
 // //         // ══════════════════════════════════════════════════════════════════
 // //         const bookingRef = doc(collection(firestore, 'bookings'));
 
-// //         // [FIX]: نستخدم tokenData.carrierId لأن trip.carrierId اتمسح من handleAcceptOffer
-// //         // أو ممكن يكون في pendingCarrierId (من العرض)
 // //         const effectiveCarrierId = tokenData.carrierId || (trip as any).pendingCarrierId || trip.carrierId || null;
 // //         const notificationRef = effectiveCarrierId
 // //           ? doc(collection(doc(firestore, 'users', effectiveCarrierId), 'notifications'))
 // //           : null;
 
-// //         // ✅ التفرقة بين رحلة مجدولة وطلب خاص
-// //         // رحلة مجدولة = حالتها Planned أو Ongoing أو الناقل هو من أنشأها
-// //         const isScheduledTrip = trip.status === 'Planned' || trip.status === 'Ongoing' || (trip.userId === (trip.carrierId || effectiveCarrierId));
+// //         // ✅ [FIX]: carrierTripId من الـ token (اللي يجي من رحلة الناقل الحقيقية)
+// //         // لو مفيش carrierTripId في الـ token → رحلة المسافر هي الأصل (طلب بدون ناقل بعد)
+// //         const effectiveCarrierTripId = tokenData.carrierTripId || null;
+// //         const isScheduledTrip = !!effectiveCarrierTripId ||
+// //           trip.status === 'Planned' || trip.status === 'Ongoing';
 
-// //         // دايمًا Pending-Carrier-Confirmation — الناقل يقرر: يوافق فوراً لو عنده رحلة، وإلا ينشئ رحلة جديدة
 // //         const newBookingStatus = 'Pending-Carrier-Confirmation';
 
 // //         batch.set(bookingRef, {
 // //           id: bookingRef.id,
-// //           tripId: trip.id,
-// //           carrierTripId: isScheduledTrip ? trip.id : (tokenData.carrierTripId || null),
+// //           tripId: trip.id,                                           // رحلة المسافر (الطلب الأصلي)
+// //           carrierTripId: effectiveCarrierTripId,                     // ✅ [FIX]: رحلة الناقل الحقيقية
 // //           userId: user.uid,
-// //           carrierId: trip.carrierId || tokenData.carrierId,
+// //           carrierId: effectiveCarrierId,
 // //           seats: passengers.length,
 // //           passengersDetails: passengers,
 // //           status: newBookingStatus,
 // //           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
 // //           currency: tokenData.currency || trip.currency || 'JOD',
+// //           depositPercentage: trip.depositPercentage ?? 0,
 // //           verifiedEmail: tokenData.email || null,
 // //           bookedByAgent: false,
 // //           requestOrigin: trip.origin,
@@ -2449,36 +942,25 @@
 
 // //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
 
-// //         // ✅ [FIX]: التحديث حسب نوع الرحلة
-// //         if (isScheduledTrip) {
-// //           // 1️⃣ إذا كانت رحلة مجدولة، لا نغير حالتها أبداً (تظل Planned)
-// //           // نضيف فقط معرف الحجز إليها لكي تظهر للناقل
-// //           const tripUpdateRef = doc(firestore, 'trips', trip.id);
-// //           batch.update(tripUpdateRef, {
-// //             bookingIds: arrayUnion(bookingRef.id),
-// //             updatedAt: serverTimestamp(),
-// //           });
-// //         } else {
-// //           // 2️⃣ إذا كان طلب مسافر (طلب خاص)، نحدّث حالته لـ Pending-Carrier-Confirmation
-// //           // [FIX]: نمسح carrierId و pendingCarrierId من رحلة المسافر — مش رحلة الناقل
-// //           // carrierId هيرجع يتحط لما الناقل ينشئ رحلته فعلاً (في handleTripCreated)
-// //           const tripUpdateRef = doc(firestore, 'trips', trip.id);
-// //           batch.update(tripUpdateRef, {
-// //             status: 'Pending-Carrier-Confirmation',
-// //             pendingBookingId: bookingRef.id,
+// //         // ✅ [FIX]: دايماً حدّث رحلة المسافر بـ pendingBookingId
+// //         // [FIX-2]: لا تمسح carrierId إلا لو مفيش رحلة ناقل مربوطة بالفعل
+// //         // لو في effectiveCarrierTripId → معناه الناقل عنده رحلة → الـ carrierId مهم للـ query
+// //         batch.update(doc(firestore, 'trips', trip.id), {
+// //           status: 'Pending-Carrier-Confirmation',
+// //           pendingBookingId: bookingRef.id,
+// //           ...(!effectiveCarrierTripId && {
 // //             carrierId: deleteField(),
 // //             pendingCarrierId: deleteField(),
+// //           }),
+// //           updatedAt: serverTimestamp(),
+// //         });
+
+// //         // ✅ [FIX]: لو في carrierTripId → أضف الـ booking لرحلة الناقل الحقيقية وخصم المقاعد
+// //         if (effectiveCarrierTripId) {
+// //           batch.update(doc(firestore, 'trips', effectiveCarrierTripId), {
+// //             bookingIds: arrayUnion(bookingRef.id),   // ✅ يظهر عند الناقل
 // //             updatedAt: serverTimestamp(),
 // //           });
-
-// //           // لو الناقل كان رابط عرضه برحلة مجدولة عنده مسبقاً، نضيف الحجز ليها
-// //           if (tokenData.carrierTripId) {
-// //             const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-// //             batch.update(carrierTripRef, {
-// //               bookingIds: arrayUnion(bookingRef.id),
-// //               updatedAt: serverTimestamp(),
-// //             });
-// //           }
 // //         }
 
 // //         const userRef = doc(firestore, 'users', user.uid);
@@ -2585,12 +1067,21 @@
 // //           seatCount={tokenData?.seatCount || 1}
 // //           onSubmit={handleConfirmBooking}
 // //           isProcessing={status === 'confirming'}
+// //           // ✅ [FIX]: تمرير أنواع الركاب من الطلب الأصلي للتعبئة التلقائية
+// //           passengerTypes={
+// //             // ✅ [FIX]: نمرر أنواع الركاب من الطلب الأصلي — child→minor لضمان التوافق مع RadioGroup
+// //             (trip.passengersDetails && trip.passengersDetails.length > 0)
+// //               ? trip.passengersDetails.map(p => {
+// //                 const t = p.type as string;
+// //                 return (t === 'child' ? 'minor' : t) as 'adult' | 'minor' | 'infant';
+// //               })
+// //               : undefined
+// //           }
 // //         />
 // //       )}
 // //     </div>
 // //   );
 // // }
-
 // 'use client';
 
 // import { useEffect, useState, Suspense } from 'react';
@@ -2606,8 +1097,24 @@
 
 // /**
 //  * @file src/app/[locale]/confirm-booking/page.tsx
-//  * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V6.1)
-//  * [FIX]: تم الفصل الذكي بين حجز "الرحلات المجدولة" و "الطلبات الخاصة" لمنع اختفاء الرحلات
+//  * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V7.0)
+//  *
+//  * [FIX-V7]: الحل الجذري لمشكلة بيانات التذكرة في مسار "طلب الرحلة":
+//  *
+//  * المشكلة كانت:
+//  *   - لما المسافر بيحجز من "طلب رحلة"، الـ token بيشاور على رحلة المسافر (tripId)
+//  *   - رحلة المسافر مش بيكون فيها بيانات كاملة (تاريخ/وقت/نقطة انطلاق) — دي عند الناقل
+//  *   - فبيانات التذكرة بتظهر غلط، والناقل ما بيشوفش المسافر، والمقاعد ما بتنخصمش
+//  *
+//  * الحل:
+//  *   - لما يكون في carrierTripId في الـ token، نجيب رحلة الناقل كـ "displayTrip"
+//  *   - نعرض بياناتها في الـ BookingDialog (التاريخ/الوقت/نقطة الانطلاق الصح)
+//  *   - نفضل نحتفظ بـ "passengerTrip" لتحديثها في Firestore
+//  *
+//  * المسارات المدعومة:
+//  *   1. رحلة مجدولة: tripId = رحلة الناقل مباشرة → displayTrip = passengerTrip = نفس الرحلة
+//  *   2. طلب رحلة: tripId = رحلة المسافر، carrierTripId = رحلة الناقل → displayTrip ≠ passengerTrip
+//  *   3. وكيل: bookingId موجود → تحديث booking موجود مسبقاً
 //  */
 
 // type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
@@ -2632,7 +1139,13 @@
 
 //   const [status, setStatus] = useState<Status>('loading');
 //   const [tokenData, setTokenData] = useState<any>(null);
-//   const [trip, setTrip] = useState<Trip | null>(null);
+
+//   // [FIX-V7]: رحلتان منفصلتان
+//   // passengerTrip: رحلة المسافر (للتحديث في Firestore)
+//   // displayTrip:   الرحلة اللي بيتعرض بياناتها في التذكرة (رحلة الناقل لو موجود، وإلا نفس passengerTrip)
+//   const [passengerTrip, setPassengerTrip] = useState<Trip | null>(null);
+//   const [displayTrip, setDisplayTrip] = useState<Trip | null>(null);
+
 //   const [isDialogOpen, setIsDialogOpen] = useState(false);
 //   const [errorCode, setErrorCode] = useState('DEFAULT');
 
@@ -2665,17 +1178,40 @@
 //           return;
 //         }
 
-//         const tripRef = doc(firestore, 'trips', data.tripId);
-//         const tripSnap = await getDoc(tripRef);
+//         // جيب رحلة المسافر (أو رحلة الناقل في حالة الرحلات المجدولة المباشرة)
+//         const passengerTripRef = doc(firestore, 'trips', data.tripId);
+//         const passengerTripSnap = await getDoc(passengerTripRef);
 
-//         if (!tripSnap.exists()) {
+//         if (!passengerTripSnap.exists()) {
 //           setStatus('error');
 //           setErrorCode('TRIP_NOT_FOUND');
 //           return;
 //         }
 
+//         const pTrip = { id: passengerTripSnap.id, ...passengerTripSnap.data() } as Trip;
+//         setPassengerTrip(pTrip);
 //         setTokenData(data);
-//         setTrip({ id: tripSnap.id, ...tripSnap.data() } as Trip);
+
+//         // [FIX-V7]: لو في carrierTripId في الـ token، جيب رحلة الناقل للعرض
+//         // لأن البيانات الحقيقية (التاريخ/الوقت/نقطة الانطلاق) موجودة عند الناقل
+//         if (data.carrierTripId) {
+//           try {
+//             const carrierTripRef = doc(firestore, 'trips', data.carrierTripId);
+//             const carrierTripSnap = await getDoc(carrierTripRef);
+//             if (carrierTripSnap.exists()) {
+//               setDisplayTrip({ id: carrierTripSnap.id, ...carrierTripSnap.data() } as Trip);
+//             } else {
+//               // fallback: لو رحلة الناقل ما اتلقتش، استخدم رحلة المسافر
+//               setDisplayTrip(pTrip);
+//             }
+//           } catch {
+//             setDisplayTrip(pTrip);
+//           }
+//         } else {
+//           // رحلة مجدولة مباشرة أو بدون ناقل بعد → نفس الرحلة
+//           setDisplayTrip(pTrip);
+//         }
+
 //         setStatus('ready');
 //         setIsDialogOpen(true);
 //       } catch (err) {
@@ -2689,7 +1225,7 @@
 //   }, [token, firestore]);
 
 //   const handleConfirmBooking = async (passengers: PassengerDetails[]) => {
-//     if (!firestore || !tokenData || !trip || !token) throw new Error('MISSING_DATA');
+//     if (!firestore || !tokenData || !passengerTrip || !displayTrip || !token) throw new Error('MISSING_DATA');
 //     if (!user?.uid) throw new Error('AUTH_REQUIRED');
 
 //     setStatus('confirming');
@@ -2700,7 +1236,7 @@
 
 //       if (tokenData.bookingId) {
 //         // ══════════════════════════════════════════════════════════════════
-//         // المسار الجاي من وكيل
+//         // المسار الجاي من وكيل: تحديث booking موجود
 //         // ══════════════════════════════════════════════════════════════════
 //         const existingBookingRef = doc(firestore, 'bookings', tokenData.bookingId);
 
@@ -2709,7 +1245,7 @@
 //           passengersDetails: passengers,
 //           seats: passengers.length,
 //           depositPaid: true,
-//           depositPercentage: trip.depositPercentage ?? 0,
+//           depositPercentage: displayTrip.depositPercentage ?? 0,
 //           verifiedEmail: tokenData.email || null,
 //           status: 'Pending-Carrier-Confirmation',
 //           updatedAt: serverTimestamp(),
@@ -2728,16 +1264,16 @@
 //         const userRef = doc(firestore, 'users', user.uid);
 //         batch.set(userRef, {
 //           activeBookingId: tokenData.bookingId,
-//           // activeIntentId: null,
 //           activeIntentId: deleteField(),
-
 //           updatedAt: serverTimestamp(),
 //         }, { merge: true });
 
-//         if (trip.carrierId) {
-//           const notifRef = doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'));
+//         // [FIX-V7]: نستخدم displayTrip.carrierId لأنه رحلة الناقل الحقيقية
+//         const effectiveCarrierId = displayTrip.carrierId || passengerTrip.carrierId;
+//         if (effectiveCarrierId) {
+//           const notifRef = doc(collection(doc(firestore, 'users', effectiveCarrierId), 'notifications'));
 //           batch.set(notifRef, {
-//             userId: trip.carrierId,
+//             userId: effectiveCarrierId,
 //             title: 'مسافر أكمّل بيانات الحجز ✅',
 //             message: `المسافر "${passengers[0]?.name || ''}" أكمل بياناته ودفع العربون — ${passengers.length} مقعد`,
 //             type: 'passenger_deposit_paid',
@@ -2750,9 +1286,9 @@
 
 //         await batch.commit();
 
-//         if (trip.carrierId) {
+//         if (effectiveCarrierId) {
 //           await sendPush({
-//             userId: trip.carrierId,
+//             userId: effectiveCarrierId,
 //             title: 'مسافر أكمّل بيانات الحجز ✅',
 //             body: `${passengers[0]?.name || 'مسافر'} دفع العربون — ${passengers.length} مقعد`,
 //             data: { type: 'passenger_deposit_paid', bookingId: tokenData.bookingId },
@@ -2760,7 +1296,9 @@
 //         }
 
 //         try {
-//           const groupChatRef = doc(firestore, 'chats', trip.id);
+//           // [FIX-V7]: الشات يربط على رحلة الناقل (displayTrip) أو رحلة المسافر
+//           const chatTripId = tokenData.carrierTripId || passengerTrip.id;
+//           const groupChatRef = doc(firestore, 'chats', chatTripId);
 //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
 //         } catch (e) {
 //           console.warn('[GroupChat] Could not join:', e);
@@ -2769,83 +1307,94 @@
 //       } else {
 //         // ══════════════════════════════════════════════════════════════════
 //         // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
+//         //
+//         // [FIX-V7]:
+//         //   - tripId في الـ booking = رحلة المسافر (passengerTrip.id) دايماً
+//         //   - carrierTripId = tokenData.carrierTripId (رحلة الناقل الحقيقية)
+//         //   - بيانات التذكرة بتيجي من displayTrip (رحلة الناقل لو موجود)
 //         // ══════════════════════════════════════════════════════════════════
 //         const bookingRef = doc(collection(firestore, 'bookings'));
 
-//         // [FIX]: نستخدم tokenData.carrierId لأن trip.carrierId اتمسح من handleAcceptOffer
-//         // أو ممكن يكون في pendingCarrierId (من العرض)
-//         const effectiveCarrierId = tokenData.carrierId || (trip as any).pendingCarrierId || trip.carrierId || null;
+//         const effectiveCarrierId = tokenData.carrierId
+//           || (passengerTrip as any).pendingCarrierId
+//           || displayTrip.carrierId
+//           || passengerTrip.carrierId
+//           || null;
+
+//         const effectiveCarrierTripId = tokenData.carrierTripId || null;
+
+//         // [FIX-V7]: تحديد نوع الرحلة للإشعار
+//         const isScheduledTrip = !!effectiveCarrierTripId
+//           || displayTrip.status === 'Planned'
+//           || displayTrip.status === 'Ongoing';
+
 //         const notificationRef = effectiveCarrierId
 //           ? doc(collection(doc(firestore, 'users', effectiveCarrierId), 'notifications'))
 //           : null;
 
-//         // ✅ التفرقة بين رحلة مجدولة وطلب خاص
-//         // رحلة مجدولة = حالتها Planned أو Ongoing أو الناقل هو من أنشأها
-//         const isScheduledTrip = trip.status === 'Planned' || trip.status === 'Ongoing' || (trip.userId === (trip.carrierId || effectiveCarrierId));
-
-//         // دايمًا Pending-Carrier-Confirmation — الناقل يقرر: يوافق فوراً لو عنده رحلة، وإلا ينشئ رحلة جديدة
-//         const newBookingStatus = 'Pending-Carrier-Confirmation';
-
+//         // [FIX-V7]: بيانات التذكرة من displayTrip (رحلة الناقل الحقيقية)
+//         // هذا يضمن أن التذكرة تعرض:
+//         //   - التاريخ الصح (departureDate من رحلة الناقل)
+//         //   - الوقت الصح (departureTime من رحلة الناقل)
+//         //   - نقطة الانطلاق الصح (meetingPoint من رحلة الناقل)
+//         //   - رابط نقطة الانطلاق (meetingPointLink من رحلة الناقل)
+//         //   - رقم الرحلة (atomicId من رحلة الناقل)
 //         batch.set(bookingRef, {
 //           id: bookingRef.id,
-//           tripId: trip.id,
-//           carrierTripId: isScheduledTrip ? trip.id : (tokenData.carrierTripId || null),
+//           tripId: passengerTrip.id,                                    // رحلة المسافر (الطلب الأصلي)
+//           carrierTripId: effectiveCarrierTripId,                       // رحلة الناقل الحقيقية
 //           userId: user.uid,
-//           carrierId: trip.carrierId || tokenData.carrierId,
+//           carrierId: effectiveCarrierId,
 //           seats: passengers.length,
 //           passengersDetails: passengers,
-//           status: newBookingStatus,
-//           totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
-//           currency: tokenData.currency || trip.currency || 'JOD',
-//           depositPercentage: trip.depositPercentage ?? 0,
+//           status: 'Pending-Carrier-Confirmation',
+//           totalPrice: (tokenData.price || displayTrip.price || passengerTrip.price || 0) * passengers.length,
+//           currency: tokenData.currency || displayTrip.currency || passengerTrip.currency || 'JOD',
+//           depositPercentage: displayTrip.depositPercentage ?? passengerTrip.depositPercentage ?? 0,
 //           verifiedEmail: tokenData.email || null,
 //           bookedByAgent: false,
-//           requestOrigin: trip.origin,
-//           requestDestination: trip.destination,
-//           requestDepartureDate: trip.departureDate,
+//           // [FIX-V7]: بيانات الطلب الأصلي من رحلة المسافر
+//           requestOrigin: passengerTrip.origin,
+//           requestDestination: passengerTrip.destination,
+//           requestDepartureDate: passengerTrip.departureDate,
 //           requestPassengers: passengers.length,
+//           // [FIX-V7]: بيانات الرحلة الفعلية من رحلة الناقل (للتذكرة)
+//           displayOrigin: displayTrip.origin,
+//           displayDestination: displayTrip.destination,
+//           displayDepartureDate: displayTrip.departureDate,
+//           displayDepartureTime: (displayTrip as any).departureTime || null,
+//           displayMeetingPoint: displayTrip.meetingPoint || null,
+//           displayMeetingPointLink: displayTrip.meetingPointLink || null,
+//           displayAtomicId: displayTrip.atomicId || null,
 //           createdAt: serverTimestamp(),
 //           updatedAt: serverTimestamp(),
 //         });
 
 //         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
 
-//         // ✅ [FIX]: التحديث حسب نوع الرحلة
-//         if (isScheduledTrip) {
-//           // 1️⃣ إذا كانت رحلة مجدولة، لا نغير حالتها أبداً (تظل Planned)
-//           // نضيف فقط معرف الحجز إليها لكي تظهر للناقل
-//           const tripUpdateRef = doc(firestore, 'trips', trip.id);
-//           batch.update(tripUpdateRef, {
-//             bookingIds: arrayUnion(bookingRef.id),
-//             updatedAt: serverTimestamp(),
-//           });
-//         } else {
-//           // 2️⃣ إذا كان طلب مسافر (طلب خاص)، نحدّث حالته لـ Pending-Carrier-Confirmation
-//           // [FIX]: نمسح carrierId و pendingCarrierId من رحلة المسافر — مش رحلة الناقل
-//           // carrierId هيرجع يتحط لما الناقل ينشئ رحلته فعلاً (في handleTripCreated)
-//           const tripUpdateRef = doc(firestore, 'trips', trip.id);
-//           batch.update(tripUpdateRef, {
-//             status: 'Pending-Carrier-Confirmation',
-//             pendingBookingId: bookingRef.id,
+//         // [FIX-V7]: تحديث رحلة المسافر (الطلب الأصلي) بـ pendingBookingId
+//         batch.update(doc(firestore, 'trips', passengerTrip.id), {
+//           status: 'Pending-Carrier-Confirmation',
+//           pendingBookingId: bookingRef.id,
+//           ...(!effectiveCarrierTripId && {
 //             carrierId: deleteField(),
 //             pendingCarrierId: deleteField(),
+//           }),
+//           updatedAt: serverTimestamp(),
+//         });
+
+//         // [FIX-V7]: تحديث رحلة الناقل الحقيقية → أضف الـ booking وخصم المقاعد
+//         if (effectiveCarrierTripId) {
+//           batch.update(doc(firestore, 'trips', effectiveCarrierTripId), {
+//             bookingIds: arrayUnion(bookingRef.id),
+//             availableSeats: increment(-passengers.length),             // [FIX-V7]: خصم المقاعد من رحلة الناقل
 //             updatedAt: serverTimestamp(),
 //           });
-
-//           // لو الناقل كان رابط عرضه برحلة مجدولة عنده مسبقاً، نضيف الحجز ليها
-//           if (tokenData.carrierTripId) {
-//             const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-//             batch.update(carrierTripRef, {
-//               bookingIds: arrayUnion(bookingRef.id),
-//               updatedAt: serverTimestamp(),
-//             });
-//           }
 //         }
 
 //         const userRef = doc(firestore, 'users', user.uid);
 //         batch.set(userRef, {
 //           activeBookingId: bookingRef.id,
-//           // activeIntentId: null,
 //           activeIntentId: deleteField(),
 //           updatedAt: serverTimestamp(),
 //         }, { merge: true });
@@ -2880,7 +1429,9 @@
 //         }
 
 //         try {
-//           const groupChatRef = doc(firestore, 'chats', trip.id);
+//           // [FIX-V7]: الشات على رحلة الناقل (لو موجود) أو رحلة المسافر
+//           const chatTripId = effectiveCarrierTripId || passengerTrip.id;
+//           const groupChatRef = doc(firestore, 'chats', chatTripId);
 //           await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
 //         } catch (e) {
 //           console.warn('[GroupChat] Could not join:', e);
@@ -2898,6 +1449,10 @@
 //     }
 //   };
 
+//   // [FIX-V7]: نمرر displayTrip للـ BookingDialog (البيانات الصح للتذكرة)
+//   // لكن نحتفظ بـ passengerTrip للعمليات الداخلية
+//   const tripForDialog = displayTrip;
+
 //   return (
 //     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background" dir="rtl">
 //       {status === 'loading' && (
@@ -2907,7 +1462,7 @@
 //         </div>
 //       )}
 
-//       {(status === 'ready' || status === 'confirming') && trip && (
+//       {(status === 'ready' || status === 'confirming') && tripForDialog && (
 //         <div className="text-center space-y-4">
 //           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
 //           <p className="text-muted-foreground">جاري استرجاع بيانات الرحلة...</p>
@@ -2935,23 +1490,31 @@
 //         </div>
 //       )}
 
-//       {trip && isDialogOpen && (
+//       {tripForDialog && isDialogOpen && (
 //         <BookingDialog
 //           isOpen={isDialogOpen}
 //           onOpenChange={(open) => {
 //             setIsDialogOpen(open);
 //             if (!open && status === 'ready') router.push(`/${locale}/dashboard`);
 //           }}
-//           trip={trip}
+//           trip={tripForDialog}
 //           seatCount={tokenData?.seatCount || 1}
 //           onSubmit={handleConfirmBooking}
 //           isProcessing={status === 'confirming'}
+//           // [FIX-V7]: نمرر أنواع الركاب من رحلة المسافر (الطلب الأصلي) للتعبئة التلقائية
+//           passengerTypes={
+//             (passengerTrip?.passengersDetails && passengerTrip.passengersDetails.length > 0)
+//               ? passengerTrip.passengersDetails.map(p => {
+//                 const t = p.type as string;
+//                 return (t === 'child' ? 'minor' : t) as 'adult' | 'minor' | 'infant';
+//               })
+//               : undefined
+//           }
 //         />
 //       )}
 //     </div>
 //   );
 // }
-
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
@@ -2967,11 +1530,31 @@ import { sendPush } from "@/lib/send-push";
 
 /**
  * @file src/app/[locale]/confirm-booking/page.tsx
- * @description THE STERILIZED BOOKING CONFIRMATION (REINFORCED - SC-806 V6.1)
- * [FIX]: تم الفصل الذكي بين حجز "الرحلات المجدولة" و "الطلبات الخاصة" لمنع اختفاء الرحلات
+ * @description THE STERILIZED BOOKING CONFIRMATION (V8.0 - DUAL PATH FIX)
+ *
+ * ══════════════════════════════════════════════════════════════════
+ * المسار 1: SCHEDULED TRIP (رحلة مجدولة)
+ *   token.tripId        = رحلة الناقل (carrierTrip) — هي المصدر الوحيد للبيانات
+ *   token.carrierTripId = null
+ *   الـ booking يُربط بـ carrierTrip.id كـ tripId
+ *   رحلة الناقل لا تتغير حالتها — فقط availableSeats تنخصم
+ *   المسافر عنده activeBookingId → يظهر له Pending-Carrier-Confirmation
+ *
+ * المسار 2: REQUEST TRIP (طلب رحلة)
+ *   token.tripId        = رحلة المسافر (passengerTrip) — الطلب الأصلي
+ *   token.carrierTripId = رحلة الناقل الحقيقية — بيانات التذكرة
+ *   بيانات التذكرة تُجلب من carrierTrip
+ *   الـ booking يُربط بـ passengerTrip.id كـ tripId و carrierTripId كـ carrierTripId
+ *   passengerTrip تتغير حالتها → Pending-Carrier-Confirmation
+ *   carrierTrip تُخصم منها المقاعد فقط + إضافة bookingId
+ *   الناقل يشوف الـ booking لأن carrierId موجود فيه
+ *
+ * المسار 3: AGENT BOOKING (حجز وكيل)
+ *   token.bookingId موجود → تحديث booking موجود
+ * ══════════════════════════════════════════════════════════════════
  */
 
-type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error' | 'expired';
+type Status = 'loading' | 'ready' | 'confirming' | 'success' | 'error';
 
 export default function ConfirmBookingPage() {
   return (
@@ -2993,7 +1576,11 @@ function ConfirmBookingContent() {
 
   const [status, setStatus] = useState<Status>('loading');
   const [tokenData, setTokenData] = useState<any>(null);
-  const [trip, setTrip] = useState<Trip | null>(null);
+  // passengerTrip: رحلة المسافر (الطلب) في مسار الطلب، أو رحلة الناقل في مسار المجدولة
+  const [passengerTrip, setPassengerTrip] = useState<Trip | null>(null);
+  // displayTrip: الرحلة التي تُعرض بياناتها في الـ BookingDialog
+  // = carrierTrip في مسار الطلب، = passengerTrip في مسار المجدولة
+  const [displayTrip, setDisplayTrip] = useState<Trip | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [errorCode, setErrorCode] = useState('DEFAULT');
 
@@ -3005,38 +1592,34 @@ function ConfirmBookingContent() {
         const tokenRef = doc(firestore, 'booking_tokens', token);
         const tokenSnap = await getDoc(tokenRef);
 
-        if (!tokenSnap.exists()) {
-          setStatus('error');
-          setErrorCode('TOKEN_INVALID');
-          return;
-        }
-
+        if (!tokenSnap.exists()) { setStatus('error'); setErrorCode('TOKEN_INVALID'); return; }
         const data = tokenSnap.data();
-
-        if (data.status === 'used') {
-          setStatus('error');
-          setErrorCode('TOKEN_USED');
-          return;
-        }
-
+        if (data.status === 'used') { setStatus('error'); setErrorCode('TOKEN_USED'); return; }
         const expiresAt = data.expiresAt?.toDate?.() || new Date(data.expiresAt);
-        if (new Date() > expiresAt) {
-          setStatus('error');
-          setErrorCode('TOKEN_EXPIRED');
-          return;
-        }
+        if (new Date() > expiresAt) { setStatus('error'); setErrorCode('TOKEN_EXPIRED'); return; }
 
-        const tripRef = doc(firestore, 'trips', data.tripId);
-        const tripSnap = await getDoc(tripRef);
+        // جيب رحلة المسافر/الناقل الأساسية (token.tripId)
+        const mainTripSnap = await getDoc(doc(firestore, 'trips', data.tripId));
+        if (!mainTripSnap.exists()) { setStatus('error'); setErrorCode('TRIP_NOT_FOUND'); return; }
+        const mainTrip = { id: mainTripSnap.id, ...mainTripSnap.data() } as Trip;
 
-        if (!tripSnap.exists()) {
-          setStatus('error');
-          setErrorCode('TRIP_NOT_FOUND');
-          return;
-        }
-
+        setPassengerTrip(mainTrip);
         setTokenData(data);
-        setTrip({ id: tripSnap.id, ...tripSnap.data() } as Trip);
+
+        if (data.carrierTripId) {
+          // ═══ مسار الطلب: جيب رحلة الناقل للعرض ═══
+          try {
+            const carrierTripSnap = await getDoc(doc(firestore, 'trips', data.carrierTripId));
+            setDisplayTrip(carrierTripSnap.exists()
+              ? { id: carrierTripSnap.id, ...carrierTripSnap.data() } as Trip
+              : mainTrip // fallback
+            );
+          } catch { setDisplayTrip(mainTrip); }
+        } else {
+          // ═══ مسار المجدولة: نفس الرحلة ═══
+          setDisplayTrip(mainTrip);
+        }
+
         setStatus('ready');
         setIsDialogOpen(true);
       } catch (err) {
@@ -3050,7 +1633,7 @@ function ConfirmBookingContent() {
   }, [token, firestore]);
 
   const handleConfirmBooking = async (passengers: PassengerDetails[]) => {
-    if (!firestore || !tokenData || !trip || !token) throw new Error('MISSING_DATA');
+    if (!firestore || !tokenData || !passengerTrip || !displayTrip || !token) throw new Error('MISSING_DATA');
     if (!user?.uid) throw new Error('AUTH_REQUIRED');
 
     setStatus('confirming');
@@ -3059,10 +1642,10 @@ function ConfirmBookingContent() {
       const batch = writeBatch(firestore);
       const tokenRef = doc(firestore, 'booking_tokens', token);
 
+      // ══════════════════════════════════════════════════════════════════
+      // المسار 3: وكيل — تحديث booking موجود
+      // ══════════════════════════════════════════════════════════════════
       if (tokenData.bookingId) {
-        // ══════════════════════════════════════════════════════════════════
-        // المسار الجاي من وكيل
-        // ══════════════════════════════════════════════════════════════════
         const existingBookingRef = doc(firestore, 'bookings', tokenData.bookingId);
 
         batch.update(existingBookingRef, {
@@ -3070,7 +1653,7 @@ function ConfirmBookingContent() {
           passengersDetails: passengers,
           seats: passengers.length,
           depositPaid: true,
-          depositPercentage: trip.depositPercentage ?? 0,
+          depositPercentage: displayTrip.depositPercentage ?? 0,
           verifiedEmail: tokenData.email || null,
           status: 'Pending-Carrier-Confirmation',
           updatedAt: serverTimestamp(),
@@ -3079,8 +1662,7 @@ function ConfirmBookingContent() {
         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
 
         if (tokenData.carrierTripId) {
-          const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-          batch.update(carrierTripRef, {
+          batch.update(doc(firestore, 'trips', tokenData.carrierTripId), {
             bookingIds: arrayUnion(tokenData.bookingId),
             updatedAt: serverTimestamp(),
           });
@@ -3089,16 +1671,15 @@ function ConfirmBookingContent() {
         const userRef = doc(firestore, 'users', user.uid);
         batch.set(userRef, {
           activeBookingId: tokenData.bookingId,
-          // activeIntentId: null,
           activeIntentId: deleteField(),
-
           updatedAt: serverTimestamp(),
         }, { merge: true });
 
-        if (trip.carrierId) {
-          const notifRef = doc(collection(doc(firestore, 'users', trip.carrierId), 'notifications'));
+        const effectiveCarrierId = displayTrip.carrierId || passengerTrip.carrierId;
+        if (effectiveCarrierId) {
+          const notifRef = doc(collection(doc(firestore, 'users', effectiveCarrierId), 'notifications'));
           batch.set(notifRef, {
-            userId: trip.carrierId,
+            userId: effectiveCarrierId,
             title: 'مسافر أكمّل بيانات الحجز ✅',
             message: `المسافر "${passengers[0]?.name || ''}" أكمل بياناته ودفع العربون — ${passengers.length} مقعد`,
             type: 'passenger_deposit_paid',
@@ -3111,9 +1692,9 @@ function ConfirmBookingContent() {
 
         await batch.commit();
 
-        if (trip.carrierId) {
+        if (effectiveCarrierId) {
           await sendPush({
-            userId: trip.carrierId,
+            userId: effectiveCarrierId,
             title: 'مسافر أكمّل بيانات الحجز ✅',
             body: `${passengers[0]?.name || 'مسافر'} دفع العربون — ${passengers.length} مقعد`,
             data: { type: 'passenger_deposit_paid', bookingId: tokenData.bookingId },
@@ -3121,49 +1702,45 @@ function ConfirmBookingContent() {
         }
 
         try {
-          const groupChatRef = doc(firestore, 'chats', trip.id);
-          await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-        } catch (e) {
-          console.warn('[GroupChat] Could not join:', e);
-        }
+          const chatTripId = tokenData.carrierTripId || passengerTrip.id;
+          await setDoc(doc(firestore, 'chats', chatTripId), { participants: arrayUnion(user.uid) }, { merge: true });
+        } catch (e) { console.warn('[GroupChat]', e); }
+      }
 
-      } else {
-        // ══════════════════════════════════════════════════════════════════
-        // المسار العادي: مسافر مباشر بدون وكيل → booking جديد
-        // ══════════════════════════════════════════════════════════════════
+      // ══════════════════════════════════════════════════════════════════
+      // المسار 1: رحلة مجدولة — carrierTripId = null
+      //   token.tripId = رحلة الناقل مباشرة
+      //   نُنشئ booking مربوط بـ carrierTrip
+      //   لا نغير حالة الرحلة — فقط نخصم المقاعد
+      // ══════════════════════════════════════════════════════════════════
+      else if (!tokenData.carrierTripId) {
         const bookingRef = doc(collection(firestore, 'bookings'));
+        // في مسار المجدولة: passengerTrip = displayTrip = رحلة الناقل
+        const carrierTrip = displayTrip;
+        const effectiveCarrierId = tokenData.carrierId || carrierTrip.carrierId || null;
 
-        // [FIX]: نستخدم tokenData.carrierId لأن trip.carrierId اتمسح من handleAcceptOffer
-        // أو ممكن يكون في pendingCarrierId (من العرض)
-        const effectiveCarrierId = tokenData.carrierId || (trip as any).pendingCarrierId || trip.carrierId || null;
-        const notificationRef = effectiveCarrierId
+        const notifRef = effectiveCarrierId
           ? doc(collection(doc(firestore, 'users', effectiveCarrierId), 'notifications'))
           : null;
 
-        // ✅ التفرقة بين رحلة مجدولة وطلب خاص
-        // رحلة مجدولة = حالتها Planned أو Ongoing أو الناقل هو من أنشأها
-        const isScheduledTrip = trip.status === 'Planned' || trip.status === 'Ongoing' || (trip.userId === (trip.carrierId || effectiveCarrierId));
-
-        // دايمًا Pending-Carrier-Confirmation — الناقل يقرر: يوافق فوراً لو عنده رحلة، وإلا ينشئ رحلة جديدة
-        const newBookingStatus = 'Pending-Carrier-Confirmation';
-
+        // الـ booking يُربط بـ carrierTrip.id كـ tripId (رحلة الناقل مباشرة)
         batch.set(bookingRef, {
           id: bookingRef.id,
-          tripId: trip.id,
-          carrierTripId: isScheduledTrip ? trip.id : (tokenData.carrierTripId || null),
+          tripId: carrierTrip.id,                      // ✅ رحلة الناقل
+          carrierTripId: null,                          // ✅ لا يوجد رحلة ثانية
           userId: user.uid,
-          carrierId: trip.carrierId || tokenData.carrierId,
+          carrierId: effectiveCarrierId,
           seats: passengers.length,
           passengersDetails: passengers,
-          status: newBookingStatus,
-          totalPrice: (tokenData.price || trip.price || 0) * passengers.length,
-          currency: tokenData.currency || trip.currency || 'JOD',
-          depositPercentage: trip.depositPercentage ?? 0,
+          status: 'Pending-Carrier-Confirmation',
+          totalPrice: (tokenData.price || carrierTrip.price || 0) * passengers.length,
+          currency: tokenData.currency || carrierTrip.currency || 'JOD',
+          depositPercentage: carrierTrip.depositPercentage ?? 0,
           verifiedEmail: tokenData.email || null,
           bookedByAgent: false,
-          requestOrigin: trip.origin,
-          requestDestination: trip.destination,
-          requestDepartureDate: trip.departureDate,
+          requestOrigin: carrierTrip.origin,
+          requestDestination: carrierTrip.destination,
+          requestDepartureDate: carrierTrip.departureDate,
           requestPassengers: passengers.length,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -3171,54 +1748,27 @@ function ConfirmBookingContent() {
 
         batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
 
-        // ✅ [FIX]: التحديث حسب نوع الرحلة
-        if (isScheduledTrip) {
-          // 1️⃣ إذا كانت رحلة مجدولة، لا نغير حالتها أبداً (تظل Planned)
-          // نضيف فقط معرف الحجز إليها لكي تظهر للناقل
-          const tripUpdateRef = doc(firestore, 'trips', trip.id);
-          batch.update(tripUpdateRef, {
-            bookingIds: arrayUnion(bookingRef.id),
-            updatedAt: serverTimestamp(),
-          });
-        } else {
-          // 2️⃣ إذا كان طلب مسافر (طلب خاص)، نحدّث حالته لـ Pending-Carrier-Confirmation
-          // [FIX]: نمسح carrierId و pendingCarrierId من رحلة المسافر — مش رحلة الناقل
-          // carrierId هيرجع يتحط لما الناقل ينشئ رحلته فعلاً (في handleTripCreated)
-          const tripUpdateRef = doc(firestore, 'trips', trip.id);
-          batch.update(tripUpdateRef, {
-            status: 'Pending-Carrier-Confirmation',
-            pendingBookingId: bookingRef.id,
-            carrierId: deleteField(),
-            pendingCarrierId: deleteField(),
-            updatedAt: serverTimestamp(),
-          });
+        // ✅ خصم المقاعد من رحلة الناقل + إضافة bookingId
+        batch.update(doc(firestore, 'trips', carrierTrip.id), {
+          bookingIds: arrayUnion(bookingRef.id),
+          availableSeats: increment(-passengers.length),
+          updatedAt: serverTimestamp(),
+          // ✅ لا نغير status الرحلة — الناقل هو من يقرر
+        });
 
-          // لو الناقل كان رابط عرضه برحلة مجدولة عنده مسبقاً، نضيف الحجز ليها
-          if (tokenData.carrierTripId) {
-            const carrierTripRef = doc(firestore, 'trips', tokenData.carrierTripId);
-            batch.update(carrierTripRef, {
-              bookingIds: arrayUnion(bookingRef.id),
-              updatedAt: serverTimestamp(),
-            });
-          }
-        }
-
-        const userRef = doc(firestore, 'users', user.uid);
-        batch.set(userRef, {
+        // ✅ تحديث user
+        batch.set(doc(firestore, 'users', user.uid), {
           activeBookingId: bookingRef.id,
-          // activeIntentId: null,
           activeIntentId: deleteField(),
           updatedAt: serverTimestamp(),
         }, { merge: true });
 
-        // إشعارات مخصصة حسب نوع الرحلة
-        if (effectiveCarrierId && notificationRef) {
-          batch.set(notificationRef, {
+        // إشعار الناقل
+        if (effectiveCarrierId && notifRef) {
+          batch.set(notifRef, {
             userId: effectiveCarrierId,
-            title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق على عرضك — في انتظار قبولك 🎉',
-            message: isScheduledTrip
-              ? `المسافر "${passengers[0]?.name || ''}" حجز ${passengers.length} مقعد في رحلتك المجدولة — يرجى تأكيد الحجز.`
-              : `المسافر "${passengers[0]?.name || ''}" وافق على عرضك — اضغط لقبول الحجز.`,
+            title: 'حجز جديد في رحلتك المجدولة! 🎫',
+            message: `المسافر "${passengers[0]?.name || ''}" حجز ${passengers.length} مقعد — يرجى تأكيد الحجز.`,
             type: 'new_booking_request',
             bookingId: bookingRef.id,
             isRead: false,
@@ -3232,20 +1782,115 @@ function ConfirmBookingContent() {
         if (effectiveCarrierId) {
           await sendPush({
             userId: effectiveCarrierId,
-            title: isScheduledTrip ? 'حجز جديد في رحلتك المجدولة! 🎫' : 'المسافر وافق على عرضك! 🎉',
-            body: isScheduledTrip
-              ? `المسافر "${passengers[0]?.name || 'مسافر'}" بانتظار تأكيد حجز ${passengers.length} مقعد`
-              : `${passengers[0]?.name || 'مسافر'} وافق — افتح التطبيق لقبول الحجز`,
+            title: 'حجز جديد في رحلتك المجدولة! 🎫',
+            body: `${passengers[0]?.name || 'مسافر'} بانتظار تأكيد ${passengers.length} مقعد`,
             data: { type: 'new_booking_request' },
           });
         }
 
         try {
-          const groupChatRef = doc(firestore, 'chats', trip.id);
-          await setDoc(groupChatRef, { participants: arrayUnion(user.uid) }, { merge: true });
-        } catch (e) {
-          console.warn('[GroupChat] Could not join:', e);
+          await setDoc(doc(firestore, 'chats', carrierTrip.id), { participants: arrayUnion(user.uid) }, { merge: true });
+        } catch (e) { console.warn('[GroupChat]', e); }
+      }
+
+      // ══════════════════════════════════════════════════════════════════
+      // المسار 2: طلب رحلة — carrierTripId موجود
+      //   token.tripId        = رحلة المسافر (passengerTrip)
+      //   token.carrierTripId = رحلة الناقل (displayTrip)
+      //   بيانات التذكرة من displayTrip
+      //   passengerTrip تتغير → Pending-Carrier-Confirmation
+      //   carrierTrip تُخصم منها المقاعد
+      // ══════════════════════════════════════════════════════════════════
+      else {
+        const bookingRef = doc(collection(firestore, 'bookings'));
+        const carrierTrip = displayTrip;  // رحلة الناقل الحقيقية
+        const effectiveCarrierId = tokenData.carrierId
+          || (passengerTrip as any).pendingCarrierId
+          || carrierTrip.carrierId
+          || null;
+
+        const notifRef = effectiveCarrierId
+          ? doc(collection(doc(firestore, 'users', effectiveCarrierId), 'notifications'))
+          : null;
+
+        // الـ booking يُربط بـ passengerTrip كـ tripId و carrierTrip كـ carrierTripId
+        batch.set(bookingRef, {
+          id: bookingRef.id,
+          tripId: passengerTrip.id,                                // ✅ رحلة المسافر
+          carrierTripId: tokenData.carrierTripId,                  // ✅ رحلة الناقل
+          userId: user.uid,
+          carrierId: effectiveCarrierId,
+          seats: passengers.length,
+          passengersDetails: passengers,
+          status: 'Pending-Carrier-Confirmation',
+          totalPrice: (tokenData.price || carrierTrip.price || passengerTrip.price || 0) * passengers.length,
+          currency: tokenData.currency || carrierTrip.currency || passengerTrip.currency || 'JOD',
+          depositPercentage: carrierTrip.depositPercentage ?? passengerTrip.depositPercentage ?? 0,
+          verifiedEmail: tokenData.email || null,
+          bookedByAgent: false,
+          // بيانات الطلب الأصلي
+          requestOrigin: passengerTrip.origin,
+          requestDestination: passengerTrip.destination,
+          requestDepartureDate: passengerTrip.departureDate,
+          requestPassengers: passengers.length,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        batch.update(tokenRef, { status: 'used', usedAt: serverTimestamp() });
+
+        // ✅ تغيير حالة رحلة المسافر (الطلب) — لا نلمس رحلة الناقل
+        batch.update(doc(firestore, 'trips', passengerTrip.id), {
+          status: 'Pending-Carrier-Confirmation',
+          pendingBookingId: bookingRef.id,
+          carrierId: deleteField(),
+          pendingCarrierId: deleteField(),
+          updatedAt: serverTimestamp(),
+        });
+
+        // ✅ خصم المقاعد من رحلة الناقل الحقيقية + إضافة bookingId
+        batch.update(doc(firestore, 'trips', tokenData.carrierTripId), {
+          bookingIds: arrayUnion(bookingRef.id),
+          availableSeats: increment(-passengers.length),
+          updatedAt: serverTimestamp(),
+        });
+
+        // ✅ تحديث user
+        batch.set(doc(firestore, 'users', user.uid), {
+          activeBookingId: bookingRef.id,
+          activeIntentId: deleteField(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+
+        // إشعار الناقل
+        if (effectiveCarrierId && notifRef) {
+          batch.set(notifRef, {
+            userId: effectiveCarrierId,
+            title: 'المسافر وافق على عرضك — في انتظار قبولك 🎉',
+            message: `المسافر "${passengers[0]?.name || ''}" وافق على عرضك — اضغط لقبول الحجز.`,
+            type: 'new_booking_request',
+            bookingId: bookingRef.id,
+            isRead: false,
+            link: `/${locale}/carrier/bookings`,
+            createdAt: serverTimestamp(),
+          });
         }
+
+        await batch.commit();
+
+        if (effectiveCarrierId) {
+          await sendPush({
+            userId: effectiveCarrierId,
+            title: 'المسافر وافق على عرضك! 🎉',
+            body: `${passengers[0]?.name || 'مسافر'} وافق — افتح التطبيق لقبول الحجز`,
+            data: { type: 'new_booking_request' },
+          });
+        }
+
+        try {
+          // الشات على رحلة الناقل
+          await setDoc(doc(firestore, 'chats', tokenData.carrierTripId), { participants: arrayUnion(user.uid) }, { merge: true });
+        } catch (e) { console.warn('[GroupChat]', e); }
       }
 
       setIsDialogOpen(false);
@@ -3268,7 +1913,7 @@ function ConfirmBookingContent() {
         </div>
       )}
 
-      {(status === 'ready' || status === 'confirming') && trip && (
+      {(status === 'ready' || status === 'confirming') && displayTrip && (
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
           <p className="text-muted-foreground">جاري استرجاع بيانات الرحلة...</p>
@@ -3296,24 +1941,22 @@ function ConfirmBookingContent() {
         </div>
       )}
 
-      {trip && isDialogOpen && (
+      {displayTrip && isDialogOpen && (
         <BookingDialog
           isOpen={isDialogOpen}
           onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open && status === 'ready') router.push(`/${locale}/dashboard`);
           }}
-          trip={trip}
+          trip={displayTrip}
           seatCount={tokenData?.seatCount || 1}
           onSubmit={handleConfirmBooking}
           isProcessing={status === 'confirming'}
-          // ✅ [FIX]: تمرير أنواع الركاب من الطلب الأصلي للتعبئة التلقائية
           passengerTypes={
-            // ✅ [FIX]: نمرر أنواع الركاب من الطلب الأصلي — child→minor لضمان التوافق مع RadioGroup
-            (trip.passengersDetails && trip.passengersDetails.length > 0)
-              ? trip.passengersDetails.map(p => {
-                const t = p.type as string;
-                return (t === 'child' ? 'minor' : t) as 'adult' | 'minor' | 'infant';
+            (passengerTrip?.passengersDetails && passengerTrip.passengersDetails.length > 0)
+              ? passengerTrip.passengersDetails.map(p => {
+                const type = p.type as string;
+                return (type === 'child' ? 'minor' : type) as 'adult' | 'minor' | 'infant';
               })
               : undefined
           }
